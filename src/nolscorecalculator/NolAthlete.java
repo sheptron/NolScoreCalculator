@@ -10,6 +10,7 @@ import IofXml30.java.PersonResult;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import nolscorecalculator.NolScoreCalculator.NolCategory;
 
 
 
@@ -47,7 +48,7 @@ public class NolAthlete {
         club = _club;
     }
     */
-    NolAthlete (PersonResult personResult, String className) {
+    NolAthlete (PersonResult personResult, NolCategory _nolCategory) {
         
         yearOfBirth = personResult.getPerson().getBirthDate().getYear();
         controlCard = personResult.getResult().get(0).getControlCard().get(0).getValue();                 
@@ -57,11 +58,12 @@ public class NolAthlete {
         surname = personResult.getPerson().getName().getFamily();
         name = firstName + " " + surname;
         id = personResult.getPerson().getId().get(0);
-        club = personResult.getOrganisation().getShortName();  
+        club = personResult.getOrganisation().getShortName();
+        nolCategory = _nolCategory;
         //organisation = personResult.getOrganisation();
         
         // Decide what NOL Category this result was in
-        if (className.contains("W")){
+        /*if (className.contains("W")){
             if (className.contains("21")) nolCategory = NolScoreCalculator.NolCategory.SeniorWomen;
             else nolCategory = NolScoreCalculator.NolCategory.JuniorWomen;
             
@@ -69,7 +71,7 @@ public class NolAthlete {
         else {
             if (className.contains("21")) nolCategory = NolScoreCalculator.NolCategory.SeniorMen;
             else nolCategory = NolScoreCalculator.NolCategory.JuniorMen;
-        }
+        }*/
     }
     
     public String getSex(){
@@ -140,6 +142,10 @@ public class NolAthlete {
 
     public NolScoreCalculator.NolCategory getNolCategory() {
         return nolCategory;
+    }
+
+    public void setNolCategory(NolScoreCalculator.NolCategory nolCategory) {
+        this.nolCategory = nolCategory;
     }
 
     @Override

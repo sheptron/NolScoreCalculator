@@ -8,6 +8,7 @@ package nolscorecalculator;
 import IofXml30.java.Id;
 import IofXml30.java.PersonResult;
 import IofXml30.java.ResultStatus;
+import java.util.Objects;
 
 /**
  *
@@ -16,8 +17,6 @@ import IofXml30.java.ResultStatus;
 public class NolResult {
     
     private static final int [] INDIVIDUAL_SCORES = {30, 27, 24, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
-    private static final int [] TEAM_SCORES = {9, 7, 5, 4, 3, 2, 1};
-    private static final int RELAY_MULTIPLIER = 2; // Team scores in a relay are TEAM_SCORES x RELAY_MULTIPLIER
 
     public Id getId() {
         return id;
@@ -79,6 +78,30 @@ public class NolResult {
         }
         
         return score;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final NolResult other = (NolResult) obj;
+        if (!this.getId().getValue().equals(other.getId().getValue())) {
+            return false;
+        }
+        return true;
     }
     
 }
