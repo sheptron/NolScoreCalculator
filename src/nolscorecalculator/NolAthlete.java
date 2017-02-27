@@ -6,6 +6,7 @@
 package nolscorecalculator;
 
 import IofXml30.java.Id;
+import IofXml30.java.Organisation;
 import IofXml30.java.PersonResult;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,6 +37,8 @@ public class NolAthlete {
     public String sex = "";
     public int totalScore = 0;
     public NolScoreCalculator.NolCategory nolCategory;
+    public String teamName;
+    public Organisation organisation;
     
   /*
     NolAthlete (int _yearOfBirth, String _controlCard, String _sex, String firstName, String lastName, Id _id, String _club) {
@@ -60,7 +63,8 @@ public class NolAthlete {
         id = personResult.getPerson().getId().get(0);
         club = personResult.getOrganisation().getShortName();
         nolCategory = _nolCategory;
-        //organisation = personResult.getOrganisation();
+        teamName = personResult.getOrganisation().getName();
+        organisation = personResult.getOrganisation();
         
         // Decide what NOL Category this result was in
         /*if (className.contains("W")){
@@ -72,6 +76,22 @@ public class NolAthlete {
             if (className.contains("21")) nolCategory = NolScoreCalculator.NolCategory.SeniorMen;
             else nolCategory = NolScoreCalculator.NolCategory.JuniorMen;
         }*/
+    }
+
+    public String getTeamName() {
+        return teamName;
+    }
+
+    public ArrayList<NolResult> getResults() {
+        return results;
+    }
+
+    public Organisation getOrganisation() {
+        return organisation;
+    }
+
+    public void setOrganisation(Organisation organisation) {
+        this.organisation = organisation;
     }
     
     public String getSex(){
@@ -139,6 +159,14 @@ public class NolAthlete {
             return (athlete1.results.get(0).handicappedSpeed > athlete2.results.get(0).handicappedSpeed) ? 1 : 0;
         }  
     }*/
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public NolScoreCalculator.NolCategory getNolCategory() {
         return nolCategory;

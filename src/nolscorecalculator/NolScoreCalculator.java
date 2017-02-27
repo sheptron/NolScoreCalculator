@@ -40,6 +40,12 @@ import javax.xml.datatype.XMLGregorianCalendar;
 import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.SAXException;
 
+import NolXml10.NolResultList;
+import java.io.FileOutputStream;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+
+
 /**
  *
  * @author shep
@@ -51,6 +57,7 @@ public class NolScoreCalculator {
     public static final String CREATOR = "Sheptron Industries";
     public static final String EVENT_SELECTION_DIALOG_STRING = "Select all the NOL races from the list below...";
     
+    // TODO NolCategory toString insert space
     public enum NolCategory {
         SeniorMen, SeniorWomen, JuniorMen, JuniorWomen
     };
@@ -78,7 +85,24 @@ public class NolScoreCalculator {
             //String query = "organisations";
             //String xml = EventorInterface.getEventorData(query);
             //OrganisationList organisationList = JAXB.unmarshal(new StringReader(xml), OrganisationList.class);
+            
+            /// TESTING
+//            String filename = "NOL_test.xml";
 //
+//            File file = new File("/home/shep/Desktop/", filename);
+//
+//            try {
+//                TransformerFactory tFactory = TransformerFactory.newInstance();
+//
+//                Transformer transformer = tFactory.newTransformer(new javax.xml.transform.stream.StreamSource("src/nolscorecalculator/NolHtmlResults.xsl"));
+//
+//                transformer.transform(new javax.xml.transform.stream.StreamSource(file),
+//                        new javax.xml.transform.stream.StreamResult(new FileOutputStream("/home/shep/Desktop/NOL_test.html")));
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+            
+            /// END TESTING
             
             // TODO get dates to/from        
             
@@ -163,6 +187,14 @@ public class NolScoreCalculator {
                             if (personResult.getResult().get(0).getStatus() == ResultStatus.DID_NOT_START) {
                                 continue;
                             }
+                            
+                            if (DEV) {
+                                // DEV ONLY - translate club into state team (2016 had no NOL teams in Eventor)
+                                Organisation organisation = personResult.getOrganisation();
+                                organisation = testingOnlyTranslateOrganisationId(organisation);
+                                personResult.setOrganisation(organisation);
+                                // END DEV ONLY
+                            }
 
                             // Create NOL Athlete and Result from the IOF PersonResult
                             NolAthlete nolAthlete = new NolAthlete(personResult, nolCategory);
@@ -181,15 +213,8 @@ public class NolScoreCalculator {
                             
                             // Team
                             
-                            // Can use nolAthlete and nolResult here
+                            // Can use nolAthlete and nolResult here                        
                             
-                            if (DEV) {
-                                // DEV ONLY - translate club into state team (2016 had no NOL teams in Eventor)
-                                Organisation organisation = personResult.getOrganisation();
-                                organisation = testingOnlyTranslateOrganisationId(organisation);
-                                personResult.setOrganisation(organisation);
-                                // END DEV ONLY
-                            }
                             
                             // Find this athletes team
                             NolTeam thisNolTeam = new NolTeam(personResult.getOrganisation(), nolCategory);
@@ -263,6 +288,10 @@ public class NolScoreCalculator {
                         juniorWomenResults.add(nolAthlete);
                 }
             }
+            
+            resultsPrinter.resultsToNolXml(seniorMenResults);
+            
+            //resultsPrinter.resultsToXml(seniorMenResults);
             
             // Just write Senior Men for now...
             resultsPrinter.writeResults(seniorMenResults);
@@ -374,6 +403,7 @@ public class NolScoreCalculator {
         myMap.put("632", "SA Arrows");
         myMap.put("633", "Tas Foresters");
         myMap.put("634", "WA Nomads");
+        myMap.put("0", "No Team");
         return myMap;
     }
     
@@ -420,6 +450,7 @@ public class NolScoreCalculator {
         else if (shortName.endsWith("S")) x = "632";
         else if (shortName.endsWith("T")) x = "633";
         else if (shortName.endsWith("W")) x = "634";
+        else x = "0";
         
         id.setValue(x);        
         newOrganisation.setId(id);
