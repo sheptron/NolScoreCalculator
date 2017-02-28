@@ -19,6 +19,8 @@ import javax.xml.bind.JAXB;
 /**
  *
  * @author shep
+ * 
+ * TODO - could use results/organisation to grab selected (ie NOL) results only
  */
 public class EventorInterface {
     

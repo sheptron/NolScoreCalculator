@@ -178,6 +178,8 @@ public class NolScoreCalculator {
                         
                         NolCategory nolCategory = getNolCategory(className);
                         
+                        ArrayList<NolTeamResult> nolTeamResults = new ArrayList<>();
+                        
                         for (PersonResult personResult : classResult.getPersonResult()) {
 
                             // Individual
@@ -214,34 +216,61 @@ public class NolScoreCalculator {
                             // Team
                             
                             // Can use nolAthlete and nolResult here                        
+                            NolTeamResult thisNolTeamResult = new NolTeamResult(personResult.getOrganisation(), nolCategory);
                             
-                            
-                            // Find this athletes team
-                            NolTeam thisNolTeam = new NolTeam(personResult.getOrganisation(), nolCategory);
-                            int indexOfNolTeam = NOLSeasonTeams.indexOf(thisNolTeam);
-                            
-                            if (indexOfNolTeam == -1){
-                                continue;
-                            } // NOT in a NOL team!
-                            
-                            // Add this result 
-                            // See if there's results from this race
-                            NolTeamResult thisNolTeamResult = new NolTeamResult(eventId);
-                            int indexOfNolTeamResult = NOLSeasonTeams.get(indexOfNolTeam).getNolTeamResults().indexOf(thisNolTeamResult);
+                            int indexOfNolTeamResult = nolTeamResults.indexOf(thisNolTeamResult);
                             
                             if (indexOfNolTeamResult == -1){
                                 // This athlete is the first in their team to add a result for this race
                                 thisNolTeamResult.addIndividualResult(personResult);
-                                NOLSeasonTeams.get(indexOfNolTeam).addResult(thisNolTeamResult);
-                            } 
-                            else
-                            {
+                                nolTeamResults.add(thisNolTeamResult);
+                            }
+                            else {
                                 // Another team member has already had a result added
-                                NOLSeasonTeams.get(indexOfNolTeam).getNolTeamResults().get(indexOfNolTeamResult).addIndividualResult(personResult);
-                            }                                                    
+                                nolTeamResults.get(indexOfNolTeamResult).addIndividualResult(personResult);
+                            }
+                                
+                            
+//                            // Find this athletes team
+//                            NolTeam thisNolTeam = new NolTeam(personResult.getOrganisation(), nolCategory);
+//                            int indexOfNolTeam = NOLSeasonTeams.indexOf(thisNolTeam);
+//                            
+//                            if (indexOfNolTeam == -1){
+//                                continue;
+//                            } // NOT in a NOL team!
+//                            
+//                            // Add this result 
+//                            // See if there's results from this race
+//                            NolTeamResult thisNolTeamResult = new NolTeamResult(eventId);
+//                            int indexOfNolTeamResult = NOLSeasonTeams.get(indexOfNolTeam).getNolTeamResults().indexOf(thisNolTeamResult);
+//                            
+//                            if (indexOfNolTeamResult == -1){
+//                                // This athlete is the first in their team to add a result for this race
+//                                thisNolTeamResult.addIndividualResult(personResult);
+//                                NOLSeasonTeams.get(indexOfNolTeam).addResult(thisNolTeamResult);
+//                            } 
+//                            else
+//                            {
+//                                // Another team member has already had a result added
+//                                NOLSeasonTeams.get(indexOfNolTeam).getNolTeamResults().get(indexOfNolTeamResult).addIndividualResult(personResult);
+//                            }                           
                         }
+                        
+                        // This class is finished so now assign team points
+                        // Sort this last lot of results
+                        // TODO Relays - need to set isRelay boolen in team result!
+                        Collections.sort(nolTeamResults, new NolTeamResultCompare());
+                        
+                        // Now they're sorted so add placings and calculate points (score)
+                        int placing = 1;
+                        for (NolTeamResult nolTeamResult : nolTeamResults){
+                            nolTeamResult.setPlacing(placing);
+                            nolTeamResult.calculateScore();
+                            placing++;
+                        }
+                        
                     }
-                }
+                }                                                
             }
 
             // Calculate Total Individual Scores
@@ -265,7 +294,7 @@ public class NolScoreCalculator {
             // Now publish
             
             // HACK with HTML - TODO use XSLT!
-            ResultsPrinter resultsPrinter = new ResultsPrinter(NOLSeasonEventString, NOLSeasonEvents);
+            ResultsPrinter resultsPrinter = new ResultsPrinter(); //(NOLSeasonEventString, NOLSeasonEvents);
 
             // Build Result lists for each Category
             ArrayList<NolAthlete> juniorMenResults = new ArrayList<>();
@@ -289,22 +318,22 @@ public class NolScoreCalculator {
                 }
             }
             
-            resultsPrinter.resultsToNolXml(seniorMenResults);
+            ArrayList<NolAthlete>[] resultsForPrinting = new ArrayList[NolCategory.values().length];
+            resultsForPrinting[NolCategory.SeniorMen.ordinal()] = seniorMenResults;
+            resultsForPrinting[NolCategory.SeniorWomen.ordinal()] = seniorWomenResults;
+            resultsForPrinting[NolCategory.JuniorMen.ordinal()] = juniorMenResults;
+            resultsForPrinting[NolCategory.JuniorWomen.ordinal()] = juniorWomenResults;
             
-            //resultsPrinter.resultsToXml(seniorMenResults);
-            
-            // Just write Senior Men for now...
-            resultsPrinter.writeResults(seniorMenResults);
-
-            resultsPrinter.finaliseTable();
-            
+            // Get User input - where to save file?
             String outputDirectory = getOutputDirectory();
             
-            String outFilename = outputDirectory + "/NOL_Individual_Results.html";
-            StringToFile.write(outFilename, resultsPrinter.htmlResults);
+            resultsPrinter.allResultsToNolXml(resultsForPrinting, outputDirectory);
+            
             
             
             // Team Scores
+            
+            
 
         }
     }

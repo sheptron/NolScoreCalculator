@@ -6,8 +6,10 @@
 package nolscorecalculator;
 
 import IofXml30.java.Id;
+import IofXml30.java.Organisation;
 import IofXml30.java.PersonResult;
 import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  *
@@ -18,19 +20,48 @@ public class NolTeamResult {
     private static final int [] TEAM_SCORES = {9, 7, 5, 4, 3, 2, 1};
     private static final int RELAY_MULTIPLIER = 2; // Team scores in a relay are TEAM_SCORES x RELAY_MULTIPLIER
     
+    public static final int RUNNERS_TO_COUNT = 3;
+    
     public ArrayList<Double> raceTimes;
     public ArrayList<String> athleteNames;  // Names corresponding to the times in raceTimes
+    public double totalTime = 0;
     public int score;
     public int placing;
     private boolean status;
     public Id id;
     public int numberOfIndividualResults = 0;
+    public boolean isRelay = false;
+
+    public boolean isIsRelay() {
+        return isRelay;
+    }
+
+    public void setIsRelay(boolean isRelay) {
+        this.isRelay = isRelay;
+    }
+    
+    public Organisation organisation;
+    public NolScoreCalculator.NolCategory nolCategory;
 
     public NolTeamResult(Id id) {
         this.id = id;  
         this.raceTimes = new ArrayList<>();
         this.athleteNames = new ArrayList<>();
     }
+
+    public NolTeamResult(Organisation organisation, NolScoreCalculator.NolCategory nolCategory) {
+        this.organisation = organisation;
+        this.nolCategory = nolCategory;
+        
+        this.raceTimes = new ArrayList<>();
+        this.athleteNames = new ArrayList<>();
+    }
+
+    public String getOrganisationIdValue() {
+        return organisation.getId().getValue();
+    }
+    
+    
     
     public void addIndividualResult(PersonResult personResult){
         
@@ -39,8 +70,37 @@ public class NolTeamResult {
         String athleteName = personResult.getPerson().getName().getGiven() + " " + personResult.getPerson().getName().getFamily();
         this.athleteNames.add(athleteName);
         
-        numberOfIndividualResults++;                
+        numberOfIndividualResults++;
+
+        // Update the team time 
+        // Sort times
+        // TODO - should we keep Names and Times aligned so we can report who's times counted??
+        Collections.sort(this.raceTimes);
+        
+        this.totalTime = 0;
+        for (int i=0; i< Math.min(this.raceTimes.size(),RUNNERS_TO_COUNT); i++){
+            this.totalTime += this.raceTimes.get(i);
+        }
+        
     }
+    
+    public void calculateScore(){
+        int score = 0;
+         
+        if (this.placing <= TEAM_SCORES.length){
+            this.score = TEAM_SCORES[this.placing-1];
+        }
+
+        if (this.isRelay) score = 2*score;
+    }
+
+    public int getNumberOfIndividualResults() {
+        return numberOfIndividualResults;
+    }
+
+    public double getTotalTime() {
+        return totalTime;
+    }    
 
     public ArrayList<Double> getRaceTimes() {
         return raceTimes;
@@ -100,9 +160,12 @@ public class NolTeamResult {
             return false;
         }
         final NolTeamResult other = (NolTeamResult) obj;
-        if (!this.getId().getValue().equals(other.getId().getValue())) {
+        if (!this.getOrganisationIdValue().equals(other.getOrganisationIdValue())){
             return false;
         }
+        /*if (!this.getId().getValue().equals(other.getId().getValue())) {
+            return false;
+        }*/
         return true;
     }
     
