@@ -18,16 +18,23 @@
             </head>
             <body>
                 <xsl:for-each select="NolResultList/NolClassResult">
+                <xsl:value-of select="NolClass"/>
                 <table border="1">
                 <tr>
-                <th><xsl:value-of select="NolClass"/></th>
-                <th>Score</th>
+                <th>Place</th>
+                <th>Name</th>
+                <th>Total</th>
+                <xsl:for-each select="NolEventList/Event">
+                <th><xsl:value-of select="RaceNumber"/></th>      
+                </xsl:for-each>                   
                 </tr>
  
                 <xsl:for-each select="NolPersonResult">                    
                     <tr>
-                    <td><xsl:value-of select="Name"/></td>    
-                    <xsl:for-each select="NolPersonRaceResult">                    
+                    <td><xsl:value-of select="Place"/></td>
+                    <td><xsl:value-of select="Name"/></td>
+                    <td><xsl:value-of select="Total"/></td>    
+                    <xsl:for-each select="Result">                    
                         <td><xsl:value-of select="Score"/></td>
                     </xsl:for-each>                      
                     </tr>

@@ -26,9 +26,9 @@ public class NolTeamResultCompare implements Comparator<NolTeamResult> {
         int fudge1 = NolTeamResult.RUNNERS_TO_COUNT + 1 - Math.min(NolTeamResult.RUNNERS_TO_COUNT, o1.getNumberOfIndividualResults());
         int fudge2 = NolTeamResult.RUNNERS_TO_COUNT + 1 - Math.min(NolTeamResult.RUNNERS_TO_COUNT, o2.getNumberOfIndividualResults());
         
-        double o1Value = o1.getTotalTime() + Math.pow(100.0,(double) fudge1);
+        double o1Value = o1.getRaceTime() + Math.pow(100.0,(double) fudge1);
         
-        double o2Value = o2.getTotalTime() + Math.pow(100.0,(double) fudge2);
+        double o2Value = o2.getRaceTime() + Math.pow(100.0,(double) fudge2);
         
         if (o1Value < o2Value){
             return -1;

@@ -25,20 +25,25 @@ public class NolAthlete {
      *
      */
     
+    public Id id;
+    public NolCategory nolCategory;
+    public String name = "";    
+    public Organisation organisation;
+    public int totalScore = 0;
     
     public ArrayList<NolResult> results;
-    public String name = "";
+    
+    public String teamName;
     String firstName = "";
     String surname = "";
     public int yearOfBirth = 0;
     public String controlCard = "0";
-    public Id id;                      // id and/or controlCard could be used for checking duplicates
+                          // id and/or controlCard could be used for checking duplicates
     public String club = "";                // TODO
     public String sex = "";
-    public int totalScore = 0;
-    public NolScoreCalculator.NolCategory nolCategory;
-    public String teamName;
-    public Organisation organisation;
+    
+    
+    
     
   /*
     NolAthlete (int _yearOfBirth, String _controlCard, String _sex, String firstName, String lastName, Id _id, String _club) {
@@ -77,6 +82,10 @@ public class NolAthlete {
             else nolCategory = NolScoreCalculator.NolCategory.JuniorMen;
         }*/
     }
+
+    public int getTotalScore() {
+        return totalScore;
+    }        
 
     public String getTeamName() {
         return teamName;

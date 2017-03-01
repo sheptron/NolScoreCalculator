@@ -33,7 +33,12 @@ public class ObjectFactory {
      * Create a new ObjectFactory that can be used to create new instances of schema derived classes for package: IofXml30.java
      * 
      */
-    public ObjectFactory() {
+    public NolEventList createNolEventList() {
+        return new NolEventList();
+    }  
+    
+    public NolEvent createNolEvent() {
+        return new NolEvent();
     }  
 
     /**
@@ -63,6 +68,8 @@ public class ObjectFactory {
      public NolPersonRaceResult createNolPersonRaceResult() {
         return new NolPersonRaceResult();
     }
+     
+     
 
     /**
      * Create an instance of {@link Score }

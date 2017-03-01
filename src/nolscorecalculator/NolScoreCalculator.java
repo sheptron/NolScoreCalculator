@@ -69,7 +69,7 @@ public class NolScoreCalculator {
     // Map of Eventor ID to Team Names - hard coded, maybe not a good idea? Can we determine NOL teams from Eventor download only?
     public static Map<String, String> nolOrganisations = createNolOrganisationsMap();
     
-    public static ArrayList<NolTeam> NOLSeasonTeams = createNolSeasonTeams();
+    public static ArrayList<NolTeam>[] NOLSeasonTeams = createNolSeasonTeams();
     
     private static final String[] VALID_ELITE_CLASSES = {"M21E", "W21E", "M17-20E", "M-20E", "W17-20E", "W-20E"};
     private static final String[] VALID_NONELITE_CLASSES = {"M21A", "W21A", "M20A", "W20A"};
@@ -86,8 +86,8 @@ public class NolScoreCalculator {
             //String xml = EventorInterface.getEventorData(query);
             //OrganisationList organisationList = JAXB.unmarshal(new StringReader(xml), OrganisationList.class);
             
-            /// TESTING
-//            String filename = "NOL_test.xml";
+//            /// TESTING
+//            String filename = "NOL_Results.xml";
 //
 //            File file = new File("/home/shep/Desktop/", filename);
 //
@@ -150,8 +150,10 @@ public class NolScoreCalculator {
 
             int numberOfEvents = indexOfSelectedEvents.length;
 
-            // Create a List of NOL Athletes t store all our results in
+            // Create a List of NOL Athletes to store all our results in
             ArrayList<NolAthlete> NOLSeasonResults = new ArrayList<>();
+            
+            // Create a List of all the NOL Races 
             ArrayList<Id> NOLSeasonEvents = new ArrayList<>();
             ArrayList<String> NOLSeasonEventString = new ArrayList<>();                        
 
@@ -162,6 +164,8 @@ public class NolScoreCalculator {
                 Id eventId = eventList.getEvent().get(indexOfSelectedEvents[i]).getId();
                 NOLSeasonEvents.add(eventId);
                 NOLSeasonEventString.add(eventList.getEvent().get(indexOfSelectedEvents[i]).getName());
+                
+                // Get this result list from Eventor (to do - get only the relevant classes!)
                 ResultList thisResultList = EventorInterface.downloadResultList(eventList, indexOfSelectedEvents[i]);
 
                 // Find the right classes : this may be complicated if we have M/W21A instead of E
@@ -262,13 +266,23 @@ public class NolScoreCalculator {
                         Collections.sort(nolTeamResults, new NolTeamResultCompare());
                         
                         // Now they're sorted so add placings and calculate points (score)
-                        int placing = 1;
+                        int placing = 0;
                         for (NolTeamResult nolTeamResult : nolTeamResults){
+                            placing++; 
                             nolTeamResult.setPlacing(placing);
                             nolTeamResult.calculateScore();
-                            placing++;
-                        }
-                        
+                            
+                            // Add these race results to teams
+                            NolTeam thisNolTeam = new NolTeam(nolTeamResult.getOrganisation(), nolCategory);
+                            int indexOfNolTeam = NOLSeasonTeams[nolCategory.ordinal()].indexOf(thisNolTeam);
+                            
+                            if (indexOfNolTeam == -1 || thisNolTeam.name.equals("No Team")){ 
+                                continue;
+                            } // NOT in a NOL team!
+                            // Add this result 
+                            
+                            NOLSeasonTeams[nolCategory.ordinal()].get(indexOfNolTeam).addResult(nolTeamResult);                                                      
+                        }                        
                     }
                 }                                                
             }
@@ -289,11 +303,22 @@ public class NolScoreCalculator {
             // We've got all NOL Categories mixed in here but that doesn't matter - we'll selectively
             // write them out...
             Collections.sort(NOLSeasonResults, (NolAthlete a1, NolAthlete a2) -> a2.totalScore - a1.totalScore);
+            
+            // TODO Sort Team Results
+            
+            // Create a List Mapping EventIds to NOL Race Numbers
+            // TODO prompt the user for this using NOLSeasonEvents and NOLSeasonEventString
+            Map<Integer, Id> nolRaceNumberToId = new HashMap<>();         
+            int nolRaceNumber = 0;
+            for (Id id : NOLSeasonEvents) {
+                nolRaceNumber++;
+                nolRaceNumberToId.put(nolRaceNumber, id);
+            }            
 
             /////////////////////////////////////
             // Now publish
             
-            // HACK with HTML - TODO use XSLT!
+            // XML -> (XSLT) -> HTML
             ResultsPrinter resultsPrinter = new ResultsPrinter(); //(NOLSeasonEventString, NOLSeasonEvents);
 
             // Build Result lists for each Category
@@ -302,7 +327,7 @@ public class NolScoreCalculator {
             ArrayList<NolAthlete> seniorMenResults = new ArrayList<>();
             ArrayList<NolAthlete> seniorWomenResults = new ArrayList<>();
             for (NolAthlete nolAthlete : NOLSeasonResults) {
-                NolCategory nolCategory = nolAthlete.getNolCategory();
+                //NolCategory nolCategory = nolAthlete.getNolCategory();
                 switch (nolAthlete.getNolCategory()) {
                     case SeniorMen:
                         seniorMenResults.add(nolAthlete);
@@ -324,14 +349,18 @@ public class NolScoreCalculator {
             resultsForPrinting[NolCategory.JuniorMen.ordinal()] = juniorMenResults;
             resultsForPrinting[NolCategory.JuniorWomen.ordinal()] = juniorWomenResults;
             
+            // Cast Team Results to NolAthletes so we can use the same printer
+            
             // Get User input - where to save file?
             String outputDirectory = getOutputDirectory();
             
-            resultsPrinter.allResultsToNolXml(resultsForPrinting, outputDirectory);
+            resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToId, outputDirectory);
             
+            //resultsPrinter.teamResultsToNolXml(NOLSeasonTeams, outputDirectory);
             
             
             // Team Scores
+            // Build Result lists for each Category
             
             
 
@@ -432,15 +461,17 @@ public class NolScoreCalculator {
         myMap.put("632", "SA Arrows");
         myMap.put("633", "Tas Foresters");
         myMap.put("634", "WA Nomads");
-        myMap.put("0", "No Team");
+        //myMap.put("0", "No Team");
         return myMap;
     }
     
-    private static ArrayList<NolTeam> createNolSeasonTeams()
+    private static ArrayList<NolTeam>[] createNolSeasonTeams()
     {
         // This should create Senior and Junior Men and Women teams
         // for each of the State Teams defined in the nolOrganisations map
-        ArrayList<NolTeam> nolSeasonTeams = new ArrayList<>();
+        ArrayList<NolTeam>[] nolSeasonTeams = new ArrayList[NolCategory.values().length];
+        // Initialise!
+        for (int i = 0; i<NolCategory.values().length; i++) nolSeasonTeams[i] = new ArrayList<>();
         
         Iterator it = nolOrganisations.entrySet().iterator();
         while (it.hasNext()) {
@@ -455,7 +486,9 @@ public class NolScoreCalculator {
             for (NolCategory nolCategory : NolCategory.values()){                            
                 NolTeam nolTeam = new NolTeam(organisation, nolCategory);
                 
-                nolSeasonTeams.add(nolTeam);
+                int test = nolCategory.ordinal();
+                
+                nolSeasonTeams[nolCategory.ordinal()].add(nolTeam);
             }
             //it.remove(); // avoids a ConcurrentModificationException
         }        

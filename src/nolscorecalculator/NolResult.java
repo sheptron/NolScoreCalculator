@@ -17,10 +17,6 @@ import java.util.Objects;
 public class NolResult {
     
     private static final int [] INDIVIDUAL_SCORES = {30, 27, 24, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
-
-    public Id getId() {
-        return id;
-    }
     
     /*
     Teams with an equal total time are placed according to the results of the highest placed competitors in each team;
@@ -29,8 +25,12 @@ public class NolResult {
     public double raceTime;
     public int score;
     public int placing;
-    private boolean status;
     public Id id;
+    private boolean status;
+
+    public NolResult(Id id) {
+        this.id = id;
+    }
 
     public NolResult(PersonResult personResult, Id _id) {       
        
@@ -50,6 +50,10 @@ public class NolResult {
             score = 0;
         }      
         
+    }
+    
+    public Id getId() {
+        return id;
     }
 
     public double getRaceTime() {

@@ -43,18 +43,21 @@ import nolscorecalculator.NolScoreCalculator.NolTeamName;
 */
 public class NolTeam {
     
-    public Id id;
-    public NolTeamName nolTeamName;
+    public Id id;                                       // In NolAthete
     public NolCategory nolCategory;
-    public String teamName;
+    public String name;
+    public Organisation organisation;
     public ArrayList<NolTeamResult> nolTeamResults;
-
+    public int totalScore = 0;
     
+    public NolTeamName nolTeamName;    
     
+     
     public NolTeam(Organisation organisation, NolCategory nolCategory) {
         
+        this.organisation = organisation;
         this.id = organisation.getId();
-        this.teamName = organisation.getName();
+        this.name = organisation.getName();
         this.nolCategory = nolCategory;
         
         this.nolTeamResults = new ArrayList<>();
@@ -71,18 +74,37 @@ public class NolTeam {
         this.id = id;
     }
 
-    public ArrayList<NolTeamResult> getNolTeamResults() {
+    public ArrayList<NolTeamResult> getResults() {
         return nolTeamResults;
     }
 
-    public void setNolTeamResults(ArrayList<NolTeamResult> nolTeamResults) {
+    public void setResults(ArrayList<NolTeamResult> nolTeamResults) {
         this.nolTeamResults = nolTeamResults;
     }
     
     public void addResult(NolTeamResult nolTeamResult){
         this.nolTeamResults.add(nolTeamResult);
+        
+        // Update Total Score
+        this.totalScore = 0;
+        for (NolTeamResult result : this.nolTeamResults){
+            this.totalScore += result.getScore();
+        }
+        
     }
 
+    public String getName() {
+        return name;
+    }
+    
+    public int getTotalScore() {
+        return totalScore;
+    }
+
+    public NolCategory getNolCategory() {
+        return nolCategory;
+    }
+    
     @Override
     public int hashCode() {
         int hash = 7;

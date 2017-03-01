@@ -26,6 +26,8 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(name = "NolPersonResult", propOrder = {
     "name",
     "team",
+    "place",
+    "total",
     "result",
 })
 public class NolPersonResult {
@@ -34,7 +36,11 @@ public class NolPersonResult {
     protected String name;
     @XmlElement(name = "Team")
     protected String team;
-    @XmlElement(name = "NolPersonRaceResult")
+    @XmlElement(name = "Place")
+    protected String place;
+    @XmlElement(name = "Total")
+    protected String total;
+    @XmlElement(name = "Result")
     protected List<NolPersonRaceResult> result;    
 
     public String getName() {
@@ -51,6 +57,22 @@ public class NolPersonResult {
 
     public void setTeam(String team) {
         this.team = team;
+    }
+
+    public String getPlace() {
+        return place;
+    }
+
+    public void setPlace(String place) {
+        this.place = place;
+    }
+
+    public String getTotal() {
+        return total;
+    }
+
+    public void setTotal(String total) {
+        this.total = total;
     }
     
     public List<NolPersonRaceResult> getResult() {

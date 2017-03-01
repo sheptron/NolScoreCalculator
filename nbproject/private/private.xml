@@ -3,15 +3,12 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/home/shep/workspace/NolScoreCalculator/src/nolscorecalculator/howto.xsl</file>
             <file>file:/home/shep/workspace/NolScoreCalculator/src/nolscorecalculator/NolAthlete.java</file>
-            <file>file:/home/shep/workspace/NolScoreCalculator/src/NolXml10/NolPersonResult.java</file>
             <file>file:/home/shep/workspace/NolScoreCalculator/src/nolscorecalculator/ResultsPrinter.java</file>
-            <file>file:/home/shep/workspace/NolScoreCalculator/src/IofXml30/java/ClassList.java</file>
-            <file>file:/home/shep/workspace/NolScoreCalculator/src/NolXml10/NolPersonRaceResult.java</file>
+            <file>file:/home/shep/workspace/NolScoreCalculator/src/nolscorecalculator/NolTeamResultCompare.java</file>
+            <file>file:/home/shep/workspace/NolScoreCalculator/src/nolscorecalculator/NolTeamResult.java</file>
             <file>file:/home/shep/workspace/NolScoreCalculator/src/nolscorecalculator/NolScoreCalculator.java</file>
             <file>file:/home/shep/workspace/NolScoreCalculator/src/nolscorecalculator/NolResult.java</file>
-            <file>file:/home/shep/workspace/NolScoreCalculator/src/nolscorecalculator/NolTeam.java</file>
             <file>file:/home/shep/workspace/NolScoreCalculator/src/nolscorecalculator/NolHtmlResults.xsl</file>
         </group>
     </open-files>

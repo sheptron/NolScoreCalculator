@@ -17,18 +17,21 @@ import java.util.Collections;
  */
 public class NolTeamResult {
     
-    private static final int [] TEAM_SCORES = {9, 7, 5, 4, 3, 2, 1};
-    private static final int RELAY_MULTIPLIER = 2; // Team scores in a relay are TEAM_SCORES x RELAY_MULTIPLIER
-    
-    public static final int RUNNERS_TO_COUNT = 3;
-    
-    public ArrayList<Double> raceTimes;
-    public ArrayList<String> athleteNames;  // Names corresponding to the times in raceTimes
-    public double totalTime = 0;
+    public double raceTime = 0; // Total race time (of all counting runners)
     public int score;
     public int placing;
-    private boolean status;
     public Id id;
+    private boolean status;
+    
+    private static final int [] TEAM_SCORES = {9, 7, 5, 4, 3, 2, 1};
+    private static final int RELAY_MULTIPLIER = 2; // Team scores in a relay are TEAM_SCORES x RELAY_MULTIPLIER
+    public static final int RUNNERS_TO_COUNT = 3;
+    
+    public Organisation organisation;
+    public NolScoreCalculator.NolCategory nolCategory;
+    
+    public ArrayList<Double> raceTimes;
+    public ArrayList<String> athleteNames;  // Names corresponding to the times in raceTimes            
     public int numberOfIndividualResults = 0;
     public boolean isRelay = false;
 
@@ -38,10 +41,7 @@ public class NolTeamResult {
 
     public void setIsRelay(boolean isRelay) {
         this.isRelay = isRelay;
-    }
-    
-    public Organisation organisation;
-    public NolScoreCalculator.NolCategory nolCategory;
+    }   
 
     public NolTeamResult(Id id) {
         this.id = id;  
@@ -57,9 +57,9 @@ public class NolTeamResult {
         this.athleteNames = new ArrayList<>();
     }
 
-    public String getOrganisationIdValue() {
-        return organisation.getId().getValue();
-    }
+    //public String getOrganisationIdValue() {
+    //    return organisation.getId().getValue();
+    //}
     
     
     
@@ -77,9 +77,9 @@ public class NolTeamResult {
         // TODO - should we keep Names and Times aligned so we can report who's times counted??
         Collections.sort(this.raceTimes);
         
-        this.totalTime = 0;
+        this.raceTime = 0;
         for (int i=0; i< Math.min(this.raceTimes.size(),RUNNERS_TO_COUNT); i++){
-            this.totalTime += this.raceTimes.get(i);
+            this.raceTime += this.raceTimes.get(i);
         }
         
     }
@@ -94,12 +94,16 @@ public class NolTeamResult {
         if (this.isRelay) score = 2*score;
     }
 
+    public Organisation getOrganisation() {
+        return organisation;
+    }
+
     public int getNumberOfIndividualResults() {
         return numberOfIndividualResults;
     }
 
-    public double getTotalTime() {
-        return totalTime;
+    public double getRaceTime() {
+        return raceTime;
     }    
 
     public ArrayList<Double> getRaceTimes() {
@@ -160,7 +164,7 @@ public class NolTeamResult {
             return false;
         }
         final NolTeamResult other = (NolTeamResult) obj;
-        if (!this.getOrganisationIdValue().equals(other.getOrganisationIdValue())){
+        if (!this.getOrganisation().getId().getValue().equals(other.getOrganisation().getId().getValue())){
             return false;
         }
         /*if (!this.getId().getValue().equals(other.getId().getValue())) {

@@ -23,12 +23,15 @@ import javax.xml.bind.annotation.XmlType;
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "NolClassResult", propOrder = {
     "clazz",
-    "personResult"
+    "personResult",
+    "eventList"    
 })
 public class NolClassResult {
 
     @XmlElement(name = "NolClass", required = true)
     protected String clazz;
+    @XmlElement(name = "NolEventList")
+    protected NolEventList eventList;
     @XmlElement(name = "NolPersonResult")
     protected List<NolPersonResult> personResult;
     //@XmlElement(name = "TeamResult")
@@ -40,6 +43,14 @@ public class NolClassResult {
 
     public void setNolClazz(String value) {
         this.clazz = value;
+    }
+    
+    public NolEventList getEventList() {
+        return eventList;
+    }
+
+    public void setEventList(NolEventList eventList) {
+        this.eventList = eventList;
     }
 
     public List<NolPersonResult> getNolPersonResult() {
@@ -61,4 +72,6 @@ public class NolClassResult {
         return this.teamResult;
     }
 */
+
+
 }
