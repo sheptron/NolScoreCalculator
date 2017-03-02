@@ -14,7 +14,11 @@ import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.xml.bind.DataBindingException;
 import javax.xml.bind.JAXB;
+import javax.xml.bind.UnmarshalException;
 
 /**
  *
@@ -26,24 +30,42 @@ public class EventorInterface {
     
     private static final String EVENTOR_BASE = "https://eventor.orienteering.asn.au/api/";
 
-    public static String getEventorData(String eventorQuery) throws MalformedURLException, IOException {
-       
+    public static String getEventorData(String eventorQuery, String description) {
+
+        String xmlString = "";
         String API_KEY = EventorApiKey.getApiKey();
-        
-        URL baseUrl = new URL(EVENTOR_BASE + eventorQuery);
+        URL baseUrl;
 
-        URLConnection con = baseUrl.openConnection();
+        try {
+            baseUrl = new URL(EVENTOR_BASE + eventorQuery);
+        }
+        catch (MalformedURLException e){
+            JFrame frame = new JFrame("Warning");
+            JOptionPane.showMessageDialog(frame, e.getMessage());
+            return xmlString;
+        }
 
-        con.setRequestProperty("Accept", "application/xml");
-        con.setRequestProperty("ApiKey", API_KEY);
+        try {
 
-        String xmlString;
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
-            xmlString = "";
+            URLConnection con = baseUrl.openConnection();
+
+            con.setRequestProperty("Accept", "application/xml");
+            con.setRequestProperty("ApiKey", API_KEY);
+
+            //String xmlString;
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            //xmlString = "";
             String inputLine;
             while ((inputLine = in.readLine()) != null) {
                 xmlString += inputLine;
-            }   System.out.println(inputLine);
+            }
+            //System.out.println(inputLine);
+        } catch (IOException io) {
+            System.out.println("Catching IOException");            
+            System.out.println(io.getMessage());
+            JFrame frame = new JFrame("Warning");
+            String warning = "Trying to get data for \"" + description + "\" got this error: " + io.getMessage();
+            JOptionPane.showMessageDialog(frame, warning);
         }
 
         return xmlString;
@@ -72,15 +94,26 @@ public class EventorInterface {
         
     }*/
     
-    public static ResultList downloadResultList(EventList eventList, int eventIndex) throws IOException{
+    public static ResultList downloadResultList(EventList eventList, int eventIndex) throws Exception {
         
         String eventId = eventList.getEvent().get(eventIndex).getId().getValue();
                 
         String eventorQuery = "results/event/iofxml?eventId=" + eventId;
-        String xmlString = getEventorData(eventorQuery);
-            
-                
+        String description = eventList.getEvent().get(eventIndex).getName();
+        String xmlString = getEventorData(eventorQuery, description);
+          
+        if (xmlString.equals("")){
+            // Somethings gone wrong in the download
+            // We've alread shown a message - just make sure whoever asked for this data knows we've had an exception...
+            throw new IOException();
+        }
+        
+        try{        
         ResultList thisResultList = JAXB.unmarshal(new StringReader(xmlString), ResultList.class);
         return thisResultList;
+        }
+        catch (DataBindingException e){
+            return new ResultList();
+        }
     }
 }

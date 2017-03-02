@@ -48,65 +48,65 @@ public class ResultsPrinter {
     public ResultsPrinter() {
     }
 
-    ResultsPrinter(ArrayList<String> eventsList, ArrayList<Id> eventIds) {
+//    ResultsPrinter(ArrayList<String> eventsList, ArrayList<Id> eventIds) {
+//
+//        // Create object with header rows
+//        // Race results must be filled in later with ArrayList of Results
+//        StringBuilder html = new StringBuilder("<!DOCTYPE html>\n<html>\n<head>\n<style>\ntable, th, td {\nborder: 1px solid black;\nborder-collapse: collapse;\n}\n</style>\n</head>\n<body><table>");
+//
+//        html.append("<tr><th>Place</th><th>Name</th><th>Club</th>");
+//        html.append("<th>Runs</th><th>Sum</th>");
+//
+//        // Sort events             
+//        for (String event : eventsList) {
+//            String string = "<th>" + event + "</th>";
+//            html.append(string);
+//        }
+//
+//        html.append("</tr>");
+//
+//        this.htmlResults = html.toString();
+//
+//        this.events = eventIds;
+//    }
 
-        // Create object with header rows
-        // Race results must be filled in later with ArrayList of Results
-        StringBuilder html = new StringBuilder("<!DOCTYPE html>\n<html>\n<head>\n<style>\ntable, th, td {\nborder: 1px solid black;\nborder-collapse: collapse;\n}\n</style>\n</head>\n<body><table>");
-
-        html.append("<tr><th>Place</th><th>Name</th><th>Club</th>");
-        html.append("<th>Runs</th><th>Sum</th>");
-
-        // Sort events             
-        for (String event : eventsList) {
-            String string = "<th>" + event + "</th>";
-            html.append(string);
-        }
-
-        html.append("</tr>");
-
-        this.htmlResults = html.toString();
-
-        this.events = eventIds;
-    }
-
-    public void writeResults(ArrayList<NolAthlete> resultList) {
-
-        StringBuilder html = new StringBuilder(this.htmlResults);
-
-        int place = 1;
-
-        for (NolAthlete athlete : resultList) {
-            html.append("<tr>");
-            // Place
-            html.append("<td>").append(place).append("</td>");
-            // Name
-            html.append("<td>").append(athlete.name).append("</td>");
-            // Club
-            html.append("<td>").append(athlete.club).append("</td>");
-            // Runs
-            html.append("<td>").append(athlete.results.size()).append("</td>");
-            // Sum
-            html.append("<td>").append(athlete.totalScore).append("</td>");
-
-            for (Id event : this.events) {
-
-                String string = "<td>0</td> ";
-                // Did athlete do this event?
-                for (NolResult result : athlete.results) {
-                    if (result.getId() == event) {
-                        string = "<td>" + result.score + "</td> ";
-                    }
-                }
-
-                html.append(string);
-            }
-            html.append("</tr>");
-            place += 1;
-        }
-        //return "";
-        this.htmlResults = html.toString();
-    }
+//    public void writeResults(ArrayList<NolAthlete> resultList) {
+//
+//        StringBuilder html = new StringBuilder(this.htmlResults);
+//
+//        int place = 1;
+//
+//        for (NolAthlete athlete : resultList) {
+//            html.append("<tr>");
+//            // Place
+//            html.append("<td>").append(place).append("</td>");
+//            // Name
+//            html.append("<td>").append(athlete.name).append("</td>");
+//            // Club
+//            html.append("<td>").append(athlete.club).append("</td>");
+//            // Runs
+//            html.append("<td>").append(athlete.results.size()).append("</td>");
+//            // Sum
+//            html.append("<td>").append(athlete.totalScore).append("</td>");
+//
+//            for (Id event : this.events) {
+//
+//                String string = "<td>0</td> ";
+//                // Did athlete do this event?
+//                for (NolResult result : athlete.results) {
+//                    if (result.getId() == event) {
+//                        string = "<td>" + result.score + "</td> ";
+//                    }
+//                }
+//
+//                html.append(string);
+//            }
+//            html.append("</tr>");
+//            place += 1;
+//        }
+//        //return "";
+//        this.htmlResults = html.toString();
+//    }
 
     /*public void writeJimSawkinsResults(ArrayList<Athlete> resultList, ArrayList<Athlete> division2ResultList){
         
@@ -343,101 +343,101 @@ public class ResultsPrinter {
 //
 //    }
     
-    public void resultsToNolXml(ArrayList<NolAthlete> overallResultList) throws JAXBException {
-        // Produce an XML for Eventor
-        
-        ArrayList<NolClassResult> classResults = new ArrayList<>();
-
-        // TODO Single ArrayList for now but do an Array of ArrayLists...
-        ObjectFactory factory = new ObjectFactory();
-        
-        ArrayList<NolPersonResult> personResults = new ArrayList<>();
-        int position = 1;
-        for (NolAthlete athlete : overallResultList) {
-
-            // Build the XML PersonResult
-            NolPersonResult personResult = factory.createNolPersonResult();
-
-            // Person 
-            personResult.setName(athlete.getName());
-            
-            // Organisation                        
-            personResult.setTeam(athlete.getOrganisation().getName());
-            
-            // Results
-            // NOL Points
-            // TODO Race Numbers
-            // TODO add empty score for missed rounds/races
-            ArrayList<NolPersonRaceResult> thisPersonRaceResults = new ArrayList<>();
-            for (NolResult nolResult : athlete.getResults()) {
-                NolPersonRaceResult raceResult = factory.createNolPersonRaceResult();
-                raceResult.setScore(nolResult.getScore());
-                raceResult.setRaceNumber(0); // TODO
-
-                thisPersonRaceResults.add(raceResult);
-            }
-
-            
-            // Build the XML PersonResult
-            personResult.setResult(thisPersonRaceResults);
-
-            // Finally add this Person Result to our list
-            personResults.add(personResult);
-
-            position += 1;
-            // Build Class
-        }
-
-        // Set up the Class (course) Result
-        NolClassResult classResult = factory.createNolClassResult();
-        classResult.setNolPersonResult(personResults);   
-        
-        classResult.setNolClazz(overallResultList.get(0).getNolCategory().toString());
-
-        classResults.add(classResult);
-
-        NolResultList resultList = factory.createNolResultList();
-        resultList.setNolClassResult(classResults);
-        resultList.setIofVersion("3.0");
-        resultList.setCreator(CREATOR);
-
-        String filename = "NOL_test.xml";
-
-        File file = new File("/home/shep/Desktop/", filename);
-
-        JAXBContext jaxbContext = JAXBContext.newInstance("NolXml10");
-        Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
-
-        // output pretty printed
-        jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-
-        jaxbMarshaller.marshal(resultList, file);
-        
-        // Now convert to HTML
-        try {
-            TransformerFactory tFactory = TransformerFactory.newInstance();
-
-            Transformer transformer =
-                    tFactory.newTransformer
-                 (new javax.xml.transform.stream.StreamSource
-                    ("src/nolscorecalculator/NolHtmlResults.xsl"));
-            
-            // TODO get save file location from user
-
-            transformer.transform
-              (new javax.xml.transform.stream.StreamSource(file),
-                      new javax.xml.transform.stream.StreamResult
-                    ( new FileOutputStream("howto.html")));
-        }
-        catch (Exception e) {
-            e.printStackTrace( );
-        }
-
-    }
+//    public void resultsToNolXml(ArrayList<NolAthlete> overallResultList) throws JAXBException {
+//        // Produce an XML for Eventor
+//        
+//        ArrayList<NolClassResult> classResults = new ArrayList<>();
+//
+//        // TODO Single ArrayList for now but do an Array of ArrayLists...
+//        ObjectFactory factory = new ObjectFactory();
+//        
+//        ArrayList<NolPersonResult> personResults = new ArrayList<>();
+//        int position = 1;
+//        for (NolAthlete athlete : overallResultList) {
+//
+//            // Build the XML PersonResult
+//            NolPersonResult personResult = factory.createNolPersonResult();
+//
+//            // Person 
+//            personResult.setName(athlete.getName());
+//            
+//            // Organisation                        
+//            personResult.setTeam(athlete.getOrganisation().getName());
+//            
+//            // Results
+//            // NOL Points
+//            // TODO Race Numbers
+//            // TODO add empty score for missed rounds/races
+//            ArrayList<NolPersonRaceResult> thisPersonRaceResults = new ArrayList<>();
+//            for (NolResult nolResult : athlete.getResults()) {
+//                NolPersonRaceResult raceResult = factory.createNolPersonRaceResult();
+//                raceResult.setScore(nolResult.getScore());
+//                raceResult.setRaceNumber(0); // TODO
+//
+//                thisPersonRaceResults.add(raceResult);
+//            }
+//
+//            
+//            // Build the XML PersonResult
+//            personResult.setResult(thisPersonRaceResults);
+//
+//            // Finally add this Person Result to our list
+//            personResults.add(personResult);
+//
+//            position += 1;
+//            // Build Class
+//        }
+//
+//        // Set up the Class (course) Result
+//        NolClassResult classResult = factory.createNolClassResult();
+//        classResult.setNolPersonResult(personResults);   
+//        
+//        classResult.setNolClazz(overallResultList.get(0).getNolCategory().toString());
+//
+//        classResults.add(classResult);
+//
+//        NolResultList resultList = factory.createNolResultList();
+//        resultList.setNolClassResult(classResults);
+//        resultList.setIofVersion("3.0");
+//        resultList.setCreator(CREATOR);
+//
+//        String filename = "NOL_test.xml";
+//
+//        File file = new File("/home/shep/Desktop/", filename);
+//
+//        JAXBContext jaxbContext = JAXBContext.newInstance("NolXml10");
+//        Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+//
+//        // output pretty printed
+//        jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+//
+//        jaxbMarshaller.marshal(resultList, file);
+//        
+//        // Now convert to HTML
+//        try {
+//            TransformerFactory tFactory = TransformerFactory.newInstance();
+//
+//            Transformer transformer =
+//                    tFactory.newTransformer
+//                 (new javax.xml.transform.stream.StreamSource
+//                    ("src/nolscorecalculator/NolHtmlResults.xsl"));
+//            
+//            // TODO get save file location from user
+//
+//            transformer.transform
+//              (new javax.xml.transform.stream.StreamSource(file),
+//                      new javax.xml.transform.stream.StreamResult
+//                    ( new FileOutputStream("howto.html")));
+//        }
+//        catch (Exception e) {
+//            e.printStackTrace( );
+//        }
+//
+//    }
     
-    public void allResultsToNolXml(ArrayList<NolAthlete>[] fullResultList, Map<Integer, Id> nolRaceNumberToId, String outputDirectory) throws JAXBException {
+    public void allResultsToNolXml(ArrayList<Entity>[] fullResultList, Map<Integer, Id> nolRaceNumberToId, String outputDirectory) throws JAXBException {
         
-        // Produce the XML then use an XSL template to produce a HTML results file
+        // Produce the XML then use an XSL template to produce a HTML results file                
         
         // Number of Events
         int numberOfEvents = nolRaceNumberToId.size();
@@ -459,11 +459,11 @@ public class ResultsPrinter {
         NolEventList eventList = factory.createNolEventList();
         eventList.setEvent(nolEvents);
         
-        for (ArrayList<NolAthlete> classResultList : fullResultList) {
+        for (ArrayList<Entity> classResultList : fullResultList) {
 
             ArrayList<NolPersonResult> personResults = new ArrayList<>();
             int place = 0;
-            for (NolAthlete athlete : classResultList) {
+            for (Entity athlete : classResultList) {
 
                 place++;
                 
@@ -491,7 +491,7 @@ public class ResultsPrinter {
                     raceResult.setRaceNumber(key);                    
 
                     // Does this race exist for this athlete?    
-                    int indexOfResult = athlete.getResults().indexOf(new NolResult(nolRaceNumberToId.get(key)));
+                    int indexOfResult = athlete.getResults().indexOf(new Result(nolRaceNumberToId.get(key)));
                     if (indexOfResult > -1) raceResult.setScore(athlete.getResults().get(indexOfResult).getScore());
                     
                     thisPersonRaceResults.add(raceResult);
@@ -558,93 +558,93 @@ public class ResultsPrinter {
 
     }
     
-    public void teamResultsToNolXml(ArrayList<NolTeam>[] fullResultList, String outputDirectory) throws JAXBException {
-        
-        // TODO just cast the teams into individuals and reuse!
-        
-        // Produce the XML then use an XSL template to produce a HTML results file
-        
-        ObjectFactory factory = new ObjectFactory();
-        
-        NolResultList resultList = factory.createNolResultList();
-        resultList.setIofVersion("3.0");
-        resultList.setCreator(CREATOR);
-        
-        ArrayList<NolClassResult> classResults = new ArrayList<>();
-        
-        for (ArrayList<NolTeam> classResultList : fullResultList) {
-
-            ArrayList<NolPersonResult> teamResults = new ArrayList<>();
-            int position = 1;
-            for (NolTeam team : classResultList) {
-
-                // Build the XML PersonResult
-                NolPersonResult personResult = factory.createNolPersonResult();
-
-                // Person 
-                personResult.setName(team.getName());
-
-                // Organisation                        
-                //personResult.setTeam(team.getOrganisation().getName());
-
-                // Results
-                // NOL Points
-                // TODO Race Numbers
-                // TODO add empty score for missed rounds/races
-                ArrayList<NolPersonRaceResult> thisPersonRaceResults = new ArrayList<>();
-                for (NolTeamResult nolResult : team.getResults()) {
-                    NolPersonRaceResult raceResult = factory.createNolPersonRaceResult();
-                    raceResult.setScore(nolResult.getScore());
-                    raceResult.setRaceNumber(0); // TODO
-
-                    thisPersonRaceResults.add(raceResult);
-                }
-
-                // Build the XML PersonResult
-                personResult.setResult(thisPersonRaceResults);
-
-                // Finally add this Person Result to our list
-                teamResults.add(personResult);
-
-                position += 1;
-                // Build Class
-            }
-
-            // Set up the Class (course) Result
-            NolClassResult classResult = factory.createNolClassResult();
-            classResult.setNolPersonResult(teamResults);
-            classResult.setNolClazz(classResultList.get(0).getNolCategory().toString());
-
-            classResults.add(classResult);
-        }
-
-        resultList.setNolClassResult(classResults);
-        
-        File tempFile = new File(outputDirectory, "NOL_Team_Results.xml");
-        File outFile = new File(outputDirectory, "NOL_Team_Results.html");
-
-        JAXBContext jaxbContext = JAXBContext.newInstance("NolXml10");
-        Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
-
-        jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-
-        jaxbMarshaller.marshal(resultList, tempFile);
-
-        // Now convert to HTML
-        try {
-            TransformerFactory tFactory = TransformerFactory.newInstance();
-
-            Transformer transformer
-                    = tFactory.newTransformer(new javax.xml.transform.stream.StreamSource("src/nolscorecalculator/NolHtmlResults.xsl"));
-
-            // TODO get save file location from user
-            transformer.transform(new javax.xml.transform.stream.StreamSource(tempFile),
-                    new javax.xml.transform.stream.StreamResult(new FileOutputStream(outFile)));
-            
-            // TODO - should we delete the XML file?
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
+//    public void teamResultsToNolXml(ArrayList<NolTeam>[] fullResultList, String outputDirectory) throws JAXBException {
+//        
+//        // TODO just cast the teams into individuals and reuse!
+//        
+//        // Produce the XML then use an XSL template to produce a HTML results file
+//        
+//        ObjectFactory factory = new ObjectFactory();
+//        
+//        NolResultList resultList = factory.createNolResultList();
+//        resultList.setIofVersion("3.0");
+//        resultList.setCreator(CREATOR);
+//        
+//        ArrayList<NolClassResult> classResults = new ArrayList<>();
+//        
+//        for (ArrayList<NolTeam> classResultList : fullResultList) {
+//
+//            ArrayList<NolPersonResult> teamResults = new ArrayList<>();
+//            int position = 1;
+//            for (NolTeam team : classResultList) {
+//
+//                // Build the XML PersonResult
+//                NolPersonResult personResult = factory.createNolPersonResult();
+//
+//                // Person 
+//                personResult.setName(team.getName());
+//
+//                // Organisation                        
+//                //personResult.setTeam(team.getOrganisation().getName());
+//
+//                // Results
+//                // NOL Points
+//                // TODO Race Numbers
+//                // TODO add empty score for missed rounds/races
+//                ArrayList<NolPersonRaceResult> thisPersonRaceResults = new ArrayList<>();
+//                for (NolTeamResult nolResult : team.getResults()) {
+//                    NolPersonRaceResult raceResult = factory.createNolPersonRaceResult();
+//                    raceResult.setScore(nolResult.getScore());
+//                    raceResult.setRaceNumber(0); // TODO
+//
+//                    thisPersonRaceResults.add(raceResult);
+//                }
+//
+//                // Build the XML PersonResult
+//                personResult.setResult(thisPersonRaceResults);
+//
+//                // Finally add this Person Result to our list
+//                teamResults.add(personResult);
+//
+//                position += 1;
+//                // Build Class
+//            }
+//
+//            // Set up the Class (course) Result
+//            NolClassResult classResult = factory.createNolClassResult();
+//            classResult.setNolPersonResult(teamResults);
+//            classResult.setNolClazz(classResultList.get(0).getNolCategory().toString());
+//
+//            classResults.add(classResult);
+//        }
+//
+//        resultList.setNolClassResult(classResults);
+//        
+//        File tempFile = new File(outputDirectory, "NOL_Team_Results.xml");
+//        File outFile = new File(outputDirectory, "NOL_Team_Results.html");
+//
+//        JAXBContext jaxbContext = JAXBContext.newInstance("NolXml10");
+//        Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+//
+//        jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+//
+//        jaxbMarshaller.marshal(resultList, tempFile);
+//
+//        // Now convert to HTML
+//        try {
+//            TransformerFactory tFactory = TransformerFactory.newInstance();
+//
+//            Transformer transformer
+//                    = tFactory.newTransformer(new javax.xml.transform.stream.StreamSource("src/nolscorecalculator/NolHtmlResults.xsl"));
+//
+//            // TODO get save file location from user
+//            transformer.transform(new javax.xml.transform.stream.StreamSource(tempFile),
+//                    new javax.xml.transform.stream.StreamResult(new FileOutputStream(outFile)));
+//            
+//            // TODO - should we delete the XML file?
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//    }
 }

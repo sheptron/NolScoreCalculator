@@ -9,9 +9,7 @@ package nolscorecalculator;
 import IofXml30.java.ClassResult;
 import IofXml30.java.EventList;
 import IofXml30.java.Id;
-import IofXml30.java.ObjectFactory;
 import IofXml30.java.Organisation;
-import IofXml30.java.OrganisationList;
 import IofXml30.java.PersonResult;
 import IofXml30.java.ResultList;
 import IofXml30.java.ResultStatus;
@@ -21,7 +19,6 @@ import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -30,20 +27,11 @@ import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.xml.bind.JAXB;
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
-import javax.xml.datatype.XMLGregorianCalendar;
 import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.SAXException;
 
-import NolXml10.NolResultList;
-import java.io.FileOutputStream;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
 
 
 /**
@@ -52,16 +40,33 @@ import javax.xml.transform.TransformerFactory;
  */
 public class NolScoreCalculator {
     
+    // TODO Easter NOT WORKING - funny setup using "All Days"
+    
     public static final boolean DEV =true;
 
     public static final String CREATOR = "Sheptron Industries";
     public static final String EVENT_SELECTION_DIALOG_STRING = "Select all the NOL races from the list below...";
     
-    // TODO NolCategory toString insert space
     public enum NolCategory {
-        SeniorMen, SeniorWomen, JuniorMen, JuniorWomen
+        SeniorMen, SeniorWomen, JuniorMen, JuniorWomen;
+        
+        @Override
+        public String toString() {
+            switch (this) {
+                case SeniorMen:
+                    return "Senior Men";
+                case SeniorWomen:
+                    return "Senior Women";
+                case JuniorMen:
+                    return "Junior Men";
+                case JuniorWomen:
+                    return "Junior Women";
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
     };
-    
+ 
     public enum NolTeamName {
         Arrows, Cockatoos, Cyclones, Foresters, Nomads, Nuggets, Stingers
     };
@@ -69,7 +74,7 @@ public class NolScoreCalculator {
     // Map of Eventor ID to Team Names - hard coded, maybe not a good idea? Can we determine NOL teams from Eventor download only?
     public static Map<String, String> nolOrganisations = createNolOrganisationsMap();
     
-    public static ArrayList<NolTeam>[] NOLSeasonTeams = createNolSeasonTeams();
+    public static ArrayList<Entity>[] NOLSeasonTeams = createNolSeasonTeams();
     
     private static final String[] VALID_ELITE_CLASSES = {"M21E", "W21E", "M17-20E", "M-20E", "W17-20E", "W-20E"};
     private static final String[] VALID_NONELITE_CLASSES = {"M21A", "W21A", "M20A", "W20A"};
@@ -108,7 +113,7 @@ public class NolScoreCalculator {
             
             //Map<String, String> nolOrganisationz = createNolOrganisationsMap();
 
-            String fromDate = "2016-10-01";
+            String fromDate = "2016-01-01";
             String toDate = "2016-10-10";
             String classificationIds = "1,2"; // 1=Championship, 2=National
 
@@ -116,7 +121,7 @@ public class NolScoreCalculator {
             String eventorQuery = "events?fromDate=" + fromDate + "&toDate=" + toDate + "&classificationIds=" + classificationIds;
             String iofXmlType = "EventList";
 
-            String xmlString = EventorInterface.getEventorData(eventorQuery);
+            String xmlString = EventorInterface.getEventorData(eventorQuery, "From Date " + fromDate + " To Date " + toDate);
 
             // Hack here - for some reason Eventor doesn't put in the iofVersion number so parsing the XML fails
             xmlString = xmlString.replace("<EventList>", "<EventList xmlns=\"http://www.orienteering.org/datastandard/3.0\" iofVersion=\"3.0\">");
@@ -136,9 +141,9 @@ public class NolScoreCalculator {
 
             JList list = new JList(eventsInDateRange);
             list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-            JOptionPane jp = new JOptionPane();
+            //JOptionPane jp = new JOptionPane();
 
-            int selection = jp.showConfirmDialog(null, new JScrollPane(list), EVENT_SELECTION_DIALOG_STRING, JOptionPane.OK_CANCEL_OPTION);
+            int selection = JOptionPane.showConfirmDialog(null, new JScrollPane(list), EVENT_SELECTION_DIALOG_STRING, JOptionPane.OK_CANCEL_OPTION);
 
             if (selection == JOptionPane.CANCEL_OPTION) {
                 // Code to use when CANCEL is PRESSED.
@@ -151,14 +156,13 @@ public class NolScoreCalculator {
             int numberOfEvents = indexOfSelectedEvents.length;
 
             // Create a List of NOL Athletes to store all our results in
-            ArrayList<NolAthlete> NOLSeasonResults = new ArrayList<>();
+            ArrayList<Entity> NOLSeasonResults = new ArrayList<>();
             
             // Create a List of all the NOL Races 
             ArrayList<Id> NOLSeasonEvents = new ArrayList<>();
             ArrayList<String> NOLSeasonEventString = new ArrayList<>();                        
 
-            // Get Results
-            //https://eventor.orientering.se/api/results/event/iofxml 
+            // Get Results (https://eventor.orientering.se/api/results/event/iofxml)
             // For each selected event
             for (int i = 0; i < numberOfEvents; i++) {
                 Id eventId = eventList.getEvent().get(indexOfSelectedEvents[i]).getId();
@@ -166,8 +170,18 @@ public class NolScoreCalculator {
                 NOLSeasonEventString.add(eventList.getEvent().get(indexOfSelectedEvents[i]).getName());
                 
                 // Get this result list from Eventor (to do - get only the relevant classes!)
-                ResultList thisResultList = EventorInterface.downloadResultList(eventList, indexOfSelectedEvents[i]);
-
+                ResultList thisResultList;
+                try {
+                    thisResultList = EventorInterface.downloadResultList(eventList, indexOfSelectedEvents[i]);
+                }
+                catch (Exception e){
+                    // Somethings gone wrong, nothing we can do!
+                    int klj = 0;
+                    continue;
+                }
+                    
+                
+                
                 // Find the right classes : this may be complicated if we have M/W21A instead of E
                 // Use E, if there's no E then use A
                 // TODO Consider A and B finals
@@ -182,7 +196,8 @@ public class NolScoreCalculator {
                         
                         NolCategory nolCategory = getNolCategory(className);
                         
-                        ArrayList<NolTeamResult> nolTeamResults = new ArrayList<>();
+                        //ArrayList<Result> nolTeamResults = new ArrayList<>();
+                        ArrayList<Result> nolTeamResults = createEmptyNolTeamResults(nolCategory, eventId);
                         
                         for (PersonResult personResult : classResult.getPersonResult()) {
 
@@ -203,8 +218,8 @@ public class NolScoreCalculator {
                             }
 
                             // Create NOL Athlete and Result from the IOF PersonResult
-                            NolAthlete nolAthlete = new NolAthlete(personResult, nolCategory);
-                            NolResult nolResult = new NolResult(personResult, eventId);
+                            Entity nolAthlete = new Entity(personResult, nolCategory);
+                            Result nolResult = new Result(personResult, eventId);
 
                             // Do we need a new athlete or create a new one?
                             if (NOLSeasonResults.contains(nolAthlete)) {
@@ -217,47 +232,19 @@ public class NolScoreCalculator {
                                 NOLSeasonResults.add(nolAthlete);
                             }
                             
-                            // Team
+                            // Team                            
+                            boolean isTeamResult = true;
+                            Result thisNolTeamResult = new Result(eventId, personResult.getOrganisation(), nolCategory, isTeamResult);
                             
-                            // Can use nolAthlete and nolResult here                        
-                            NolTeamResult thisNolTeamResult = new NolTeamResult(personResult.getOrganisation(), nolCategory);
-                            
-                            int indexOfNolTeamResult = nolTeamResults.indexOf(thisNolTeamResult);
-                            
-                            if (indexOfNolTeamResult == -1){
-                                // This athlete is the first in their team to add a result for this race
-                                thisNolTeamResult.addIndividualResult(personResult);
-                                nolTeamResults.add(thisNolTeamResult);
-                            }
-                            else {
-                                // Another team member has already had a result added
-                                nolTeamResults.get(indexOfNolTeamResult).addIndividualResult(personResult);
-                            }
-                                
-                            
-//                            // Find this athletes team
-//                            NolTeam thisNolTeam = new NolTeam(personResult.getOrganisation(), nolCategory);
-//                            int indexOfNolTeam = NOLSeasonTeams.indexOf(thisNolTeam);
-//                            
-//                            if (indexOfNolTeam == -1){
-//                                continue;
-//                            } // NOT in a NOL team!
-//                            
-//                            // Add this result 
-//                            // See if there's results from this race
-//                            NolTeamResult thisNolTeamResult = new NolTeamResult(eventId);
-//                            int indexOfNolTeamResult = NOLSeasonTeams.get(indexOfNolTeam).getNolTeamResults().indexOf(thisNolTeamResult);
-//                            
-//                            if (indexOfNolTeamResult == -1){
-//                                // This athlete is the first in their team to add a result for this race
-//                                thisNolTeamResult.addIndividualResult(personResult);
-//                                NOLSeasonTeams.get(indexOfNolTeam).addResult(thisNolTeamResult);
-//                            } 
-//                            else
-//                            {
-//                                // Another team member has already had a result added
-//                                NOLSeasonTeams.get(indexOfNolTeam).getNolTeamResults().get(indexOfNolTeamResult).addIndividualResult(personResult);
-//                            }                           
+                            // Find the right team result and add this personResult to it
+                            // TODO speedup : keep an index to lookup rather than loop through
+                            for (Result res : nolTeamResults){
+                                // Check Organisation Id Value
+                                if(res.getOrganisation().getId().getValue().equals(personResult.getOrganisation().getId().getValue())) {                                    
+                                    res.addIndividualResult(personResult); // Add result
+                                    continue;   // No need to keep looking in nolTeamResults
+                                }                                
+                            }                                                  
                         }
                         
                         // This class is finished so now assign team points
@@ -267,13 +254,13 @@ public class NolScoreCalculator {
                         
                         // Now they're sorted so add placings and calculate points (score)
                         int placing = 0;
-                        for (NolTeamResult nolTeamResult : nolTeamResults){
+                        for (Result nolTeamResult : nolTeamResults){
                             placing++; 
                             nolTeamResult.setPlacing(placing);
                             nolTeamResult.calculateScore();
                             
                             // Add these race results to teams
-                            NolTeam thisNolTeam = new NolTeam(nolTeamResult.getOrganisation(), nolCategory);
+                            Entity thisNolTeam = new Entity(nolTeamResult.getOrganisation(), nolCategory);
                             int indexOfNolTeam = NOLSeasonTeams[nolCategory.ordinal()].indexOf(thisNolTeam);
                             
                             if (indexOfNolTeam == -1 || thisNolTeam.name.equals("No Team")){ 
@@ -295,16 +282,19 @@ public class NolScoreCalculator {
             } else {
                 numberOfRaceToCount = (int) Math.ceil((double) numberOfEvents / 2.0);
             }
-            for (NolAthlete nolAthlete : NOLSeasonResults) {
+            for (Entity nolAthlete : NOLSeasonResults) {
                 nolAthlete.updateTotalScore(numberOfRaceToCount);
             }
 
             // Now Sort the Results -Decreasing Total Score
-            // We've got all NOL Categories mixed in here but that doesn't matter - we'll selectively
-            // write them out...
-            Collections.sort(NOLSeasonResults, (NolAthlete a1, NolAthlete a2) -> a2.totalScore - a1.totalScore);
+            // We've got all NOL Categories mixed in here but that doesn't matter - we'll selectively write them out ...
+            // TODO Make NOLSeasonResults be an array [] of ArrayLists, each element being for a category like NOLSeasonTeams
+            Collections.sort(NOLSeasonResults, (Entity a1, Entity a2) -> a2.totalScore - a1.totalScore); // Sort Individual
             
-            // TODO Sort Team Results
+            // Sort Team Results
+            for (NolCategory nolCategory : NolCategory.values()){                
+                Collections.sort(NOLSeasonTeams[nolCategory.ordinal()], (Entity e1, Entity e2) -> e2.getTotalScore() - e1.getTotalScore());                                            
+            }
             
             // Create a List Mapping EventIds to NOL Race Numbers
             // TODO prompt the user for this using NOLSeasonEvents and NOLSeasonEventString
@@ -318,15 +308,15 @@ public class NolScoreCalculator {
             /////////////////////////////////////
             // Now publish
             
-            // XML -> (XSLT) -> HTML
-            ResultsPrinter resultsPrinter = new ResultsPrinter(); //(NOLSeasonEventString, NOLSeasonEvents);
+            // XML -> (XSLT) -> HTML            
 
             // Build Result lists for each Category
-            ArrayList<NolAthlete> juniorMenResults = new ArrayList<>();
-            ArrayList<NolAthlete> juniorWomenResults = new ArrayList<>();
-            ArrayList<NolAthlete> seniorMenResults = new ArrayList<>();
-            ArrayList<NolAthlete> seniorWomenResults = new ArrayList<>();
-            for (NolAthlete nolAthlete : NOLSeasonResults) {
+            // TODO simplify this build (use a loop somehow?)            
+            ArrayList<Entity> juniorMenResults = new ArrayList<>();
+            ArrayList<Entity> juniorWomenResults = new ArrayList<>();
+            ArrayList<Entity> seniorMenResults = new ArrayList<>();
+            ArrayList<Entity> seniorWomenResults = new ArrayList<>();
+            for (Entity nolAthlete : NOLSeasonResults) {
                 //NolCategory nolCategory = nolAthlete.getNolCategory();
                 switch (nolAthlete.getNolCategory()) {
                     case SeniorMen:
@@ -342,28 +332,24 @@ public class NolScoreCalculator {
                         juniorWomenResults.add(nolAthlete);
                 }
             }
-            
-            ArrayList<NolAthlete>[] resultsForPrinting = new ArrayList[NolCategory.values().length];
+
+            int numberOfNolCategories = NolCategory.values().length;
+            ArrayList<Entity>[] resultsForPrinting = new ArrayList[numberOfNolCategories*2];  // Individual + Team Results
             resultsForPrinting[NolCategory.SeniorMen.ordinal()] = seniorMenResults;
             resultsForPrinting[NolCategory.SeniorWomen.ordinal()] = seniorWomenResults;
             resultsForPrinting[NolCategory.JuniorMen.ordinal()] = juniorMenResults;
             resultsForPrinting[NolCategory.JuniorWomen.ordinal()] = juniorWomenResults;
             
-            // Cast Team Results to NolAthletes so we can use the same printer
+            // Add Team Results to resultsForPrinting
+            for (NolCategory nolCategory : NolCategory.values()){
+                resultsForPrinting[numberOfNolCategories+nolCategory.ordinal()] = NOLSeasonTeams[nolCategory.ordinal()];
+            }
             
             // Get User input - where to save file?
             String outputDirectory = getOutputDirectory();
             
+            ResultsPrinter resultsPrinter = new ResultsPrinter();
             resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToId, outputDirectory);
-            
-            //resultsPrinter.teamResultsToNolXml(NOLSeasonTeams, outputDirectory);
-            
-            
-            // Team Scores
-            // Build Result lists for each Category
-            
-            
-
         }
     }
 
@@ -465,11 +451,11 @@ public class NolScoreCalculator {
         return myMap;
     }
     
-    private static ArrayList<NolTeam>[] createNolSeasonTeams()
+    private static ArrayList<Entity>[] createNolSeasonTeams()
     {
         // This should create Senior and Junior Men and Women teams
         // for each of the State Teams defined in the nolOrganisations map
-        ArrayList<NolTeam>[] nolSeasonTeams = new ArrayList[NolCategory.values().length];
+        ArrayList<Entity>[] nolSeasonTeams = new ArrayList[NolCategory.values().length];
         // Initialise!
         for (int i = 0; i<NolCategory.values().length; i++) nolSeasonTeams[i] = new ArrayList<>();
         
@@ -484,16 +470,37 @@ public class NolScoreCalculator {
             organisation.setName((String) pair.getValue());
             
             for (NolCategory nolCategory : NolCategory.values()){                            
-                NolTeam nolTeam = new NolTeam(organisation, nolCategory);
+                Entity nolTeam = new Entity(organisation, nolCategory);
                 
                 int test = nolCategory.ordinal();
                 
                 nolSeasonTeams[nolCategory.ordinal()].add(nolTeam);
-            }
-            //it.remove(); // avoids a ConcurrentModificationException
+            }            
         }        
         
         return nolSeasonTeams;
+    }
+    
+    private static ArrayList<Result> createEmptyNolTeamResults(NolCategory nolCategory, Id eventId){
+        
+        ArrayList<Result> nolTeamResults = new ArrayList<>();
+        
+        for (Map.Entry pair : nolOrganisations.entrySet()) {
+            
+            // Create an empty Result for each team (organisation)
+            Id id = new Id();
+            id.setValue((String) pair.getKey());
+            Organisation organisation = new Organisation();
+            organisation.setId(id);
+            organisation.setName((String) pair.getValue());
+            boolean isTeamResult = true;
+            
+            Result result = new Result(eventId, organisation, nolCategory, isTeamResult);
+            
+            nolTeamResults.add(result);
+        }    
+                
+        return nolTeamResults;        
     }
     
     private static Organisation testingOnlyTranslateOrganisationId(Organisation organisation){
