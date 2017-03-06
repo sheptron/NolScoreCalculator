@@ -7,6 +7,7 @@
 package nolscorecalculator;
 
 import IofXml30.java.ClassResult;
+import IofXml30.java.Event;
 import IofXml30.java.EventList;
 import IofXml30.java.Id;
 import IofXml30.java.Organisation;
@@ -76,7 +77,7 @@ public class NolScoreCalculator {
     
     public static ArrayList<Entity>[] NOLSeasonTeams = createNolSeasonTeams();
     
-    private static final String[] VALID_ELITE_CLASSES = {"M21E", "W21E", "M17-20E", "M-20E", "W17-20E", "W-20E"};
+    private static final String[] VALID_ELITE_CLASSES = {"M21E", "W21E", "M17-20E", "M-20E", "M20E", "W17-20E", "W-20E", "W20E"};
     private static final String[] VALID_NONELITE_CLASSES = {"M21A", "W21A", "M20A", "W20A"};
 
     /**
@@ -160,14 +161,21 @@ public class NolScoreCalculator {
             
             // Create a List of all the NOL Races 
             ArrayList<Id> NOLSeasonEvents = new ArrayList<>();
-            ArrayList<String> NOLSeasonEventString = new ArrayList<>();                        
+            ArrayList<String> NOLSeasonEventString = new ArrayList<>();  
+            ArrayList<Event> NOLSeasonEventList = new ArrayList<>();
 
             // Get Results (https://eventor.orientering.se/api/results/event/iofxml)
             // For each selected event
             for (int i = 0; i < numberOfEvents; i++) {
+                
+                // TODO get date of events and use that for race numbers
+                NOLSeasonEventList.add(eventList.getEvent().get(indexOfSelectedEvents[i]));
+                
                 Id eventId = eventList.getEvent().get(indexOfSelectedEvents[i]).getId();
                 NOLSeasonEvents.add(eventId);
                 NOLSeasonEventString.add(eventList.getEvent().get(indexOfSelectedEvents[i]).getName());
+                
+                System.out.println(eventList.getEvent().get(indexOfSelectedEvents[i]).getName());
                 
                 // Get this result list from Eventor (to do - get only the relevant classes!)
                 ResultList thisResultList;
@@ -176,7 +184,6 @@ public class NolScoreCalculator {
                 }
                 catch (Exception e){
                     // Somethings gone wrong, nothing we can do!
-                    int klj = 0;
                     continue;
                 }
                     
@@ -216,7 +223,7 @@ public class NolScoreCalculator {
                                 personResult.setOrganisation(organisation);
                                 // END DEV ONLY
                             }
-
+                            
                             // Create NOL Athlete and Result from the IOF PersonResult
                             Entity nolAthlete = new Entity(personResult, nolCategory);
                             Result nolResult = new Result(personResult, eventId);
