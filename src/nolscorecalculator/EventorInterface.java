@@ -96,7 +96,8 @@ public class EventorInterface {
     
     public static ResultList downloadResultList(EventList eventList, int eventIndex) throws Exception {
         
-        String eventId = eventList.getEvent().get(eventIndex).getId().getValue();
+        //String eventId = eventList.getEvent().get(eventIndex).getId().getValue();
+        String eventId = eventList.getEvent().get(eventIndex).getEventorId().getValue();
                 
         String eventorQuery = "results/event/iofxml?eventId=" + eventId;
         String description = eventList.getEvent().get(eventIndex).getName();

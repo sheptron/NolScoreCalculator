@@ -60,6 +60,7 @@ import javax.xml.datatype.XMLGregorianCalendar;
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "Event", propOrder = {
     "id",
+    "eventorId",
     "name",
     "startTime",
     "endTime",
@@ -81,8 +82,10 @@ import javax.xml.datatype.XMLGregorianCalendar;
 })
 public class Event {
 
-    @XmlElement(name = "EventId") // This was just "Id" but it was failing to grab EventId when downloading EventList from Eventor
+    @XmlElement(name = "Id") 
     protected Id id;
+    @XmlElement(name = "EventId") // Eventor uses "EventId" when downloading EventList, wtf.
+    protected Id eventorId;
     @XmlElement(name = "Name", required = true)
     protected String name;
     @XmlElement(name = "StartTime")
@@ -150,6 +153,16 @@ public class Event {
         this.id = value;
     }
 
+    public Id getEventorId() {
+        return eventorId;
+    }
+
+    public void setEventorId(Id eventorId) {
+        this.eventorId = eventorId;
+    }
+
+    
+    
     /**
      * Gets the value of the name property.
      * 

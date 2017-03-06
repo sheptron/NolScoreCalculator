@@ -128,9 +128,10 @@ public class NolScoreCalculator {
             xmlString = xmlString.replace("<EventList>", "<EventList xmlns=\"http://www.orienteering.org/datastandard/3.0\" iofVersion=\"3.0\">");
 
             EventList eventList = JAXB.unmarshal(new StringReader(xmlString), EventList.class);
+            
+            // TODO Sort by putting events with names including "NOL" up the top
 
             // Now sort which event we want (we want to get their EventId so we can download the results)
-            // Find all with "NOL" in the title?
             // Give user a selection box
             // Build up a list
             int[] indexOfSelectedEvents;
@@ -159,20 +160,15 @@ public class NolScoreCalculator {
             // Create a List of NOL Athletes to store all our results in
             ArrayList<Entity> NOLSeasonResults = new ArrayList<>();
             
-            // Create a List of all the NOL Races 
-            ArrayList<Id> NOLSeasonEvents = new ArrayList<>();
+            // Create a List of all the NOL Races             
             ArrayList<String> NOLSeasonEventString = new ArrayList<>();  
             ArrayList<Event> NOLSeasonEventList = new ArrayList<>();
 
             // Get Results (https://eventor.orientering.se/api/results/event/iofxml)
             // For each selected event
             for (int i = 0; i < numberOfEvents; i++) {
-                
-                // TODO get date of events and use that for race numbers
-                NOLSeasonEventList.add(eventList.getEvent().get(indexOfSelectedEvents[i]));
-                
-                Id eventId = eventList.getEvent().get(indexOfSelectedEvents[i]).getId();
-                NOLSeasonEvents.add(eventId);
+             
+                //Id eventId = eventList.getEvent().get(indexOfSelectedEvents[i]).getId();                
                 NOLSeasonEventString.add(eventList.getEvent().get(indexOfSelectedEvents[i]).getName());
                 
                 System.out.println(eventList.getEvent().get(indexOfSelectedEvents[i]).getName());
@@ -187,7 +183,9 @@ public class NolScoreCalculator {
                     continue;
                 }
                     
-                
+                // Keep a record of this event (want date of events to use for race numbers)
+                NOLSeasonEventList.add(thisResultList.getEvent());
+                Id eventId = thisResultList.getEvent().getId();
                 
                 // Find the right classes : this may be complicated if we have M/W21A instead of E
                 // Use E, if there's no E then use A
@@ -218,6 +216,7 @@ public class NolScoreCalculator {
                             
                             if (DEV) {
                                 // DEV ONLY - translate club into state team (2016 had no NOL teams in Eventor)
+                                // Note some races - eg Melbourne Sprint races will fail here... no N/A/W/Q etc appended at end of club names!
                                 Organisation organisation = personResult.getOrganisation();
                                 organisation = testingOnlyTranslateOrganisationId(organisation);
                                 personResult.setOrganisation(organisation);
@@ -241,7 +240,7 @@ public class NolScoreCalculator {
                             
                             // Team                            
                             boolean isTeamResult = true;
-                            Result thisNolTeamResult = new Result(eventId, personResult.getOrganisation(), nolCategory, isTeamResult);
+                            //Result thisNolTeamResult = new Result(eventId, personResult.getOrganisation(), nolCategory, isTeamResult);
                             
                             // Find the right team result and add this personResult to it
                             // TODO speedup : keep an index to lookup rather than loop through
@@ -303,13 +302,17 @@ public class NolScoreCalculator {
                 Collections.sort(NOLSeasonTeams[nolCategory.ordinal()], (Entity e1, Entity e2) -> e2.getTotalScore() - e1.getTotalScore());                                            
             }
             
-            // Create a List Mapping EventIds to NOL Race Numbers
-            // TODO prompt the user for this using NOLSeasonEvents and NOLSeasonEventString
+            // Create a List Mapping EventIds to NOL Race Numbers - sort Events by date/time
+            // TODO prompt the user to check/correct this using NOLSeasonEvents and NOLSeasonEventString
+            
+            // Sort events by date
+            Collections.sort(NOLSeasonEventList, new EventCompare());
+            
             Map<Integer, Id> nolRaceNumberToId = new HashMap<>();         
             int nolRaceNumber = 0;
-            for (Id id : NOLSeasonEvents) {
+            for (Event event : NOLSeasonEventList) {
                 nolRaceNumber++;
-                nolRaceNumberToId.put(nolRaceNumber, id);
+                nolRaceNumberToId.put(nolRaceNumber, event.getId());
             }            
 
             /////////////////////////////////////
