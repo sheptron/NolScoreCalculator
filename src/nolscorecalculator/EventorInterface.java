@@ -8,6 +8,7 @@ package nolscorecalculator;
 import IofXml30.java.EventList;
 import IofXml30.java.ResultList;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -19,6 +20,7 @@ import javax.swing.JOptionPane;
 import javax.xml.bind.DataBindingException;
 import javax.xml.bind.JAXB;
 import javax.xml.bind.UnmarshalException;
+import static nolscorecalculator.NolScoreCalculator.DEV;
 
 /**
  *
@@ -96,7 +98,6 @@ public class EventorInterface {
     
     public static ResultList downloadResultList(EventList eventList, int eventIndex) throws Exception {
         
-        //String eventId = eventList.getEvent().get(eventIndex).getId().getValue();
         String eventId = eventList.getEvent().get(eventIndex).getEventorId().getValue();
                 
         String eventorQuery = "results/event/iofxml?eventId=" + eventId;
@@ -110,11 +111,27 @@ public class EventorInterface {
         }
         
         try{        
-        ResultList thisResultList = JAXB.unmarshal(new StringReader(xmlString), ResultList.class);
-        return thisResultList;
+            // Testing ONLY
+            if (DEV) stringToFile(xmlString, description); // Dump downloaded XML to a file
+            
+            ResultList thisResultList = JAXB.unmarshal(new StringReader(xmlString), ResultList.class);        
+            return thisResultList;
         }
         catch (DataBindingException e){
             return new ResultList();
         }
+    }
+    
+    public static void stringToFile(String xmlSource, String description) throws IOException {
+        
+        String cleanedDescription = description.replace("/", "-");
+        java.io.FileWriter fw = new java.io.FileWriter("/home/shep/Desktop/" + cleanedDescription + ".xml");
+        //fw.write(xmlSource);       
+        //fw.close();
+        
+        BufferedWriter out = new BufferedWriter(fw);
+        out.write(xmlSource);
+        out.close();
+        fw.close();
     }
 }

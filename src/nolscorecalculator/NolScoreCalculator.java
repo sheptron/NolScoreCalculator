@@ -42,8 +42,9 @@ import org.xml.sax.SAXException;
 public class NolScoreCalculator {
     
     // TODO Easter NOT WORKING - funny setup using "All Days"
+    // TODO Juniors included in Senior results for Sprint Races (just dodgy this up)
     
-    public static final boolean DEV =true;
+    public static final boolean DEV = true;
 
     public static final String CREATOR = "Sheptron Industries";
     public static final String EVENT_SELECTION_DIALOG_STRING = "Select all the NOL races from the list below...";
@@ -92,27 +93,8 @@ public class NolScoreCalculator {
             //String xml = EventorInterface.getEventorData(query);
             //OrganisationList organisationList = JAXB.unmarshal(new StringReader(xml), OrganisationList.class);
             
-//            /// TESTING
-//            String filename = "NOL_Results.xml";
-//
-//            File file = new File("/home/shep/Desktop/", filename);
-//
-//            try {
-//                TransformerFactory tFactory = TransformerFactory.newInstance();
-//
-//                Transformer transformer = tFactory.newTransformer(new javax.xml.transform.stream.StreamSource("src/nolscorecalculator/NolHtmlResults.xsl"));
-//
-//                transformer.transform(new javax.xml.transform.stream.StreamSource(file),
-//                        new javax.xml.transform.stream.StreamResult(new FileOutputStream("/home/shep/Desktop/NOL_test.html")));
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-            
-            /// END TESTING
-            
-            // TODO get dates to/from        
-            
-            //Map<String, String> nolOrganisationz = createNolOrganisationsMap();
+           
+            // TODO get dates to/from from user       
 
             String fromDate = "2016-01-01";
             String toDate = "2016-10-10";
@@ -359,6 +341,7 @@ public class NolScoreCalculator {
             String outputDirectory = getOutputDirectory();
             
             ResultsPrinter resultsPrinter = new ResultsPrinter();
+            // // TODO out of bounds exception here when empty
             resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToId, outputDirectory);
         }
     }

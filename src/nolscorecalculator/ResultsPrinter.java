@@ -55,6 +55,8 @@ public class ResultsPrinter {
         // Number of Events
         int numberOfEvents = nolRaceNumberToId.size();
         
+        if (numberOfEvents == 0) return;            
+        
         ObjectFactory factory = new ObjectFactory();
         
         NolResultList resultList = factory.createNolResultList();
@@ -74,6 +76,8 @@ public class ResultsPrinter {
         
         for (ArrayList<Entity> classResultList : fullResultList) {
 
+            if (classResultList.isEmpty()) continue;
+                
             ArrayList<NolPersonResult> personResults = new ArrayList<>();
             int place = 0;
             for (Entity athlete : classResultList) {
@@ -131,7 +135,7 @@ public class ResultsPrinter {
             }
 
             // Set up the Class (course) Result
-            NolClassResult classResult = factory.createNolClassResult();
+            NolClassResult classResult = factory.createNolClassResult();          
             classResult.setNolClazz(classResultList.get(0).getNolCategory().toString());
             classResult.setEventList(eventList);
             classResult.setNolPersonResult(personResults);
