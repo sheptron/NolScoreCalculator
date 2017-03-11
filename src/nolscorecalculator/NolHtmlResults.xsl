@@ -26,7 +26,7 @@
                 <th>Name</th>
                 <th>Total</th>
                 <xsl:for-each select="NolEventList/Event">
-                <th><div title="Round Number"><xsl:value-of select="RaceNumber"/></div></th>      
+                <th><div title="{Name}"><xsl:value-of select="RaceNumber"/></div></th>      
                 </xsl:for-each>                   
                 </tr>
  

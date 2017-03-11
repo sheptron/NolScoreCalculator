@@ -298,11 +298,11 @@ public class NolScoreCalculator {
             // Sort events by date
             Collections.sort(NOLSeasonEventList, new EventCompare());
             
-            Map<Integer, Id> nolRaceNumberToId = new HashMap<>();         
+            Map<Integer, Event> nolRaceNumberToEvent = new HashMap<>();         
             int nolRaceNumber = 0;
             for (Event event : NOLSeasonEventList) {
                 nolRaceNumber++;
-                nolRaceNumberToId.put(nolRaceNumber, event.getId());
+                nolRaceNumberToEvent.put(nolRaceNumber, event);
             }            
 
             /////////////////////////////////////
@@ -350,7 +350,7 @@ public class NolScoreCalculator {
             
             ResultsPrinter resultsPrinter = new ResultsPrinter();
             // // TODO out of bounds exception here when empty
-            resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToId, outputDirectory);
+            resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToEvent, outputDirectory);
         }
     }
 

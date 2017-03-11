@@ -7,6 +7,7 @@ package nolscorecalculator;
 
 //import IofXml30.java.ClassResult;
 //import IofXml30.java.Clazz;
+import IofXml30.java.Event;
 import IofXml30.java.Id;
 import IofXml30.java.PersonResult;
 //import IofXml30.java.ObjectFactory;
@@ -48,7 +49,7 @@ public class ResultsPrinter {
     public ResultsPrinter() {
     }
     
-    public void allResultsToNolXml(ArrayList<Entity>[] fullResultList, Map<Integer, Id> nolRaceNumberToId, String outputDirectory) throws JAXBException {
+    public void allResultsToNolXml(ArrayList<Entity>[] fullResultList, Map<Integer, Event> nolRaceNumberToId, String outputDirectory) throws JAXBException {
         
         // Produce the XML then use an XSL template to produce a HTML results file                
         
@@ -69,6 +70,10 @@ public class ResultsPrinter {
         for (int i=0; i<numberOfEvents; i++){      
             NolEvent event = new NolEvent();
             event.setRaceNumber(String.format("%d", i+1));
+            Event thisEvent = nolRaceNumberToId.get(i+1);
+            // TODO what happens if thisEvent is NULL
+            String thisEventName = thisEvent.getName();
+            event.setName(thisEventName);
             nolEvents.add(event);
         }
         NolEventList eventList = factory.createNolEventList();
@@ -108,7 +113,7 @@ public class ResultsPrinter {
                     raceResult.setRaceNumber(key);                    
 
                     // Does this race exist for this athlete?    
-                    int indexOfResult = athlete.getResults().indexOf(new Result(nolRaceNumberToId.get(key)));
+                    int indexOfResult = athlete.getResults().indexOf(new Result(nolRaceNumberToId.get(key).getId()));
                     if (indexOfResult > -1) raceResult.setScore(athlete.getResults().get(indexOfResult).getScore());
                     
                     thisPersonRaceResults.add(raceResult);

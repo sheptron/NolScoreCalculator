@@ -18,6 +18,7 @@ import javax.xml.bind.annotation.XmlType;
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "NolEvent", propOrder = {
     "raceNumber",
+    "name"
 })
 
 public class NolEvent {
@@ -36,5 +37,15 @@ public class NolEvent {
         this.raceNumber = raceNumber;
     }
     
+    @XmlElement(name = "Name")
+    protected String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
     
 }
