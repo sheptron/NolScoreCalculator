@@ -90,7 +90,7 @@ public class ResultsPrinter {
                 // Person 
                 personResult.setName(athlete.getName());
 
-                // Organisation                        
+                // Organisation                         
                 personResult.setTeam(athlete.getOrganisation().getName());
                 
                 // Place

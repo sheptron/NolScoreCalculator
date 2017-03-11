@@ -19,13 +19,14 @@
             <body>
                 <xsl:for-each select="NolResultList/NolClassResult">
                 <xsl:value-of select="NolClass"/>
-                <table border="1">
+                <style> table.nol-table, .nol-table td { border: 1px solid black; border-collapse: collapse; } </style>
+                <table class="nol-table">
                 <tr>
                 <th>Place</th>
                 <th>Name</th>
                 <th>Total</th>
                 <xsl:for-each select="NolEventList/Event">
-                <th><xsl:value-of select="RaceNumber"/></th>      
+                <th><div title="Round Number"><xsl:value-of select="RaceNumber"/></div></th>      
                 </xsl:for-each>                   
                 </tr>
  
@@ -40,6 +41,7 @@
                     </tr>
                     </xsl:for-each>        
                 </table>
+                <br/>
                 </xsl:for-each>
             </body>
         </html>

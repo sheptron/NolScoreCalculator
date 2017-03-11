@@ -44,7 +44,7 @@ public class NolScoreCalculator {
     // TODO Easter NOT WORKING - funny setup using "All Days"
     // TODO Juniors included in Senior results for Sprint Races (just dodgy this up)
     
-    public static final boolean DEV = true;
+    public static final boolean DEV = false;
 
     public static final String CREATOR = "Sheptron Industries";
     public static final String EVENT_SELECTION_DIALOG_STRING = "Select all the NOL races from the list below...";
@@ -95,12 +95,13 @@ public class NolScoreCalculator {
             
            
             // TODO get dates to/from from user       
-
-            String fromDate = "2016-01-01";
-            String toDate = "2016-10-10";
+            //DateSelector dateSelector = new DateSelector();
+            //int jkl = 0;
+            
+            String fromDate = "2017-01-01";
+            String toDate = "2017-10-31";
             String classificationIds = "1,2"; // 1=Championship, 2=National
 
-            //String eventorQuery = "events?fromDate=2016-12-01&toDate=2016-12-31";
             String eventorQuery = "events?fromDate=" + fromDate + "&toDate=" + toDate + "&classificationIds=" + classificationIds;
             String iofXmlType = "EventList";
 
@@ -195,6 +196,9 @@ public class NolScoreCalculator {
                             if (personResult.getResult().get(0).getStatus() == ResultStatus.DID_NOT_START) {
                                 continue;
                             }
+                            if (personResult.getResult().get(0).getStatus() == ResultStatus.INACTIVE) {
+                                continue;
+                            }
                             
                             if (DEV) {
                                 // DEV ONLY - translate club into state team (2016 had no NOL teams in Eventor)
@@ -220,7 +224,11 @@ public class NolScoreCalculator {
                                 NOLSeasonResults.add(nolAthlete);
                             }
                             
-                            // Team                            
+                            // Team 
+                            if (personResult.getOrganisation() == null){
+                                // This person isn't in a team
+                                continue;
+                            }
                             boolean isTeamResult = true;
                             //Result thisNolTeamResult = new Result(eventId, personResult.getOrganisation(), nolCategory, isTeamResult);
                             
