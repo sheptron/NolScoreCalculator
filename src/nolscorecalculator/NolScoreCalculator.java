@@ -8,6 +8,7 @@ package nolscorecalculator;
 
 import IofXml30.java.ClassResult;
 import IofXml30.java.Event;
+import IofXml30.java.EventForm;
 import IofXml30.java.EventList;
 import IofXml30.java.Id;
 import IofXml30.java.Organisation;
@@ -33,8 +34,6 @@ import javax.xml.bind.JAXBException;
 import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.SAXException;
 
-
-
 /**
  *
  * @author shep
@@ -42,7 +41,8 @@ import org.xml.sax.SAXException;
 public class NolScoreCalculator {
     
     // TODO Easter NOT WORKING - funny setup using "All Days"
-    // TODO Juniors included in Senior results for Sprint Races (just dodgy this up)
+    // TODO Juniors included in Senior results for Sprint Races (just dodgy this up)  
+    // TODO mouse over race name on all scores
     
     public static final boolean DEV = false;
 
@@ -95,7 +95,8 @@ public class NolScoreCalculator {
             
            
             // TODO get dates to/from from user       
-            //DateSelector dateSelector = new DateSelector();
+            //DateSelector dateSelector = new DateSelector(); // TODO make this wait!
+            //String startDate = dateSelector.getStartDate();
             //int jkl = 0;
             
             String fromDate = "2017-01-01";
@@ -229,9 +230,7 @@ public class NolScoreCalculator {
                                 // This person isn't in a team
                                 continue;
                             }
-                            boolean isTeamResult = true;
-                            //Result thisNolTeamResult = new Result(eventId, personResult.getOrganisation(), nolCategory, isTeamResult);
-                            
+                                                       
                             // Find the right team result and add this personResult to it
                             // TODO speedup : keep an index to lookup rather than loop through
                             for (Result res : nolTeamResults){
@@ -269,34 +268,48 @@ public class NolScoreCalculator {
                     }
                 }                                                
             }
+            
+            // Sort events by date
+            Collections.sort(NOLSeasonEventList, new EventCompare());
 
-            // Calculate Total Individual Scores
-            int numberOfRaceToCount;
-            // Count an extra race early on in the season
-            if (numberOfEvents < 8) {
-                numberOfRaceToCount = (int) Math.ceil((double) numberOfEvents / 2.0) + 1;
-            } else {
-                numberOfRaceToCount = (int) Math.ceil((double) numberOfEvents / 2.0);
+            // Calculate the number of individual events in the Season
+            int numberOfIndividualEvents = 0;
+            for (Event event : NOLSeasonEventList){
+                if (event.getForm().isEmpty()){
+                    // TODO Prompt the user whether this was an individual result
+                }
+                else if (event.getForm().get(0) == EventForm.INDIVIDUAL){
+                    numberOfIndividualEvents += 1;
+                }
             }
+            
+            // Calculate Total Individual Scores            
             for (Entity nolAthlete : NOLSeasonResults) {
-                nolAthlete.updateTotalScore(numberOfRaceToCount);
+                nolAthlete.updateTotalScore(numberOfIndividualEvents);
             }
 
             // Now Sort the Results -Decreasing Total Score
             // We've got all NOL Categories mixed in here but that doesn't matter - we'll selectively write them out ...
             // TODO Make NOLSeasonResults be an array [] of ArrayLists, each element being for a category like NOLSeasonTeams
-            Collections.sort(NOLSeasonResults, (Entity a1, Entity a2) -> a2.totalScore - a1.totalScore); // Sort Individual
+            Collections.sort(NOLSeasonResults, (Entity a1, Entity a2) -> a2.totalScore - a1.totalScore); // Sort Individual                   
             
-            // Sort Team Results
+            // Calculate Total Team Scores 
+            for (NolCategory nolCategory : NolCategory.values()){
+                for (Entity nolTeam : NOLSeasonTeams[nolCategory.ordinal()]){
+                    nolTeam.updateTotalScore(numberOfEvents);
+                }
+            }
+            
+            // Sort Team Results - we need to know which is the most recent event for this
+            Id mostRecentEventId = NOLSeasonEventList.get(NOLSeasonEventList.size()-1).getId();
             for (NolCategory nolCategory : NolCategory.values()){                
-                Collections.sort(NOLSeasonTeams[nolCategory.ordinal()], (Entity e1, Entity e2) -> e2.getTotalScore() - e1.getTotalScore());                                            
+                //Collections.sort(NOLSeasonTeams[nolCategory.ordinal()], (Entity e1, Entity e2) -> e2.getTotalScore() - e1.getTotalScore());
+                Collections.sort(NOLSeasonTeams[nolCategory.ordinal()], (Entity e1, Entity e2) -> e2.getSortableTeamScore(mostRecentEventId) - e1.getSortableTeamScore(mostRecentEventId));
             }
             
             // Create a List Mapping EventIds to NOL Race Numbers - sort Events by date/time
             // TODO prompt the user to check/correct this using NOLSeasonEvents and NOLSeasonEventString
             
-            // Sort events by date
-            Collections.sort(NOLSeasonEventList, new EventCompare());
             
             Map<Integer, Event> nolRaceNumberToEvent = new HashMap<>();         
             int nolRaceNumber = 0;

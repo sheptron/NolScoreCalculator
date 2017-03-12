@@ -5,18 +5,8 @@
  */
 package nolscorecalculator;
 
-//import IofXml30.java.ClassResult;
-//import IofXml30.java.Clazz;
 import IofXml30.java.Event;
 import IofXml30.java.Id;
-import IofXml30.java.PersonResult;
-//import IofXml30.java.ObjectFactory;
-//import IofXml30.java.Organisation;
-//import IofXml30.java.Person;
-//import IofXml30.java.PersonName;
-//import IofXml30.java.PersonRaceResult;
-//import IofXml30.java.PersonResult;
-//import IofXml30.java.ResultList;
 import NolXml10.NolClassResult;
 import NolXml10.NolEvent;
 import NolXml10.NolEventList;
@@ -44,7 +34,7 @@ import java.util.Map;
 public class ResultsPrinter {
 
     public String htmlResults;
-    private ArrayList<Id> events;
+    //private ArrayList<Id> events;
     
     public ResultsPrinter() {
     }
@@ -85,6 +75,8 @@ public class ResultsPrinter {
                 
             ArrayList<NolPersonResult> personResults = new ArrayList<>();
             int place = 0;
+            int previousAthletesTotalScore = 0;
+            int previousAthletesPlace = 1;
             for (Entity athlete : classResultList) {
 
                 place++;
@@ -97,13 +89,20 @@ public class ResultsPrinter {
 
                 // Organisation                         
                 personResult.setTeam(athlete.getOrganisation().getName());
-                
-                // Place
-                personResult.setPlace(String.format("%d", place));
-                
+                                           
                 // Total Score
                 personResult.setTotal(String.format("%d", athlete.getTotalScore()));
 
+                // Place
+                if (athlete.getTotalScore() == previousAthletesTotalScore) {
+                    personResult.setPlace(String.format("%d", previousAthletesPlace));
+                }
+                else {
+                    personResult.setPlace(String.format("%d", place));
+                    previousAthletesPlace = place;
+                    previousAthletesTotalScore = athlete.getTotalScore();
+                }                              
+                
                 // Results (NOL Points)                 
                 ArrayList<NolPersonRaceResult> thisPersonRaceResults = new ArrayList<>();
                 for (Integer key : nolRaceNumberToId.keySet()){
@@ -119,16 +118,8 @@ public class ResultsPrinter {
                     thisPersonRaceResults.add(raceResult);
                 }
                 
-                // Sort Results by Race NUmber
+                // Sort Results by Race Number
                 Collections.sort(thisPersonRaceResults, (NolPersonRaceResult a1, NolPersonRaceResult a2) -> a1.getRaceNumber() - a2.getRaceNumber());
-
-                /*for (NolResult nolResult : athlete.getResults()) {
-                    NolPersonRaceResult raceResult = factory.createNolPersonRaceResult();
-                    raceResult.setScore(nolResult.getScore());
-                    raceResult.setRaceNumber(0);
-
-                    thisPersonRaceResults.add(raceResult);
-                }*/
 
                 // Build the XML PersonResult
                 personResult.setResult(thisPersonRaceResults);

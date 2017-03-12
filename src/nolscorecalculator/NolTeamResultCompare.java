@@ -15,7 +15,7 @@ public class NolTeamResultCompare implements Comparator<Result> {
 
     @Override
     public int compare(Result o1, Result o2) {
-        // TODO - separate teams if they're equal (individual runners placings? look up rules)
+        
         // -1 if o1 comes before o2, 
         // +1 if 01 comes after o2
         // 0 if o1 and o2 are equal
@@ -36,7 +36,18 @@ public class NolTeamResultCompare implements Comparator<Result> {
         else if (o1Value > o2Value){
             return 1;
         }
-        else return 0;
+        else {
+            // Teams with equal time are placed according to the placing of the highest placed competitor
+            if (o1.getBestIndividualPlacing() < o2.getBestIndividualPlacing()){
+                return -1;
+            }
+            else if (o1.getBestIndividualPlacing() > o2.getBestIndividualPlacing()){
+                return 1;
+            }
+            else {
+                return 0;
+            }
+        }
     }
     
 }

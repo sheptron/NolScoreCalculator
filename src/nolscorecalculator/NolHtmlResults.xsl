@@ -19,6 +19,7 @@
             <body>
                 <xsl:for-each select="NolResultList/NolClassResult">
                 <xsl:value-of select="NolClass"/>
+                <style> table.nol-table, .nol-table th { border: 2px solid black; border-collapse: collapse; } </style>
                 <style> table.nol-table, .nol-table td { border: 1px solid black; border-collapse: collapse; } </style>
                 <table class="nol-table">
                 <tr>
