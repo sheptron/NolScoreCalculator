@@ -11,6 +11,7 @@ import IofXml30.java.PersonResult;
 import IofXml30.java.ResultStatus;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Objects;
 
 /**
  *
@@ -18,12 +19,17 @@ import java.util.Collections;
  */
 public final class Result {
     
+    public enum TeamResultType{
+        Normal, AandBfinal, Relay
+    };
+    
     public double raceTime = 0; // Total race time (of all counting runners)
     public int score = 0;
     public int placing;
     public Id id;
     public boolean status;
     private boolean isTeamResult = false;
+    public TeamResultType teamResultType;
     
     public static final int [] TEAM_SCORES = {9, 7, 5, 4, 3, 2, 1};
     public static final int RELAY_MULTIPLIER = 2; // Team scores in a relay are TEAM_SCORES x RELAY_MULTIPLIER
@@ -54,13 +60,14 @@ public final class Result {
         this.athleteNames = new ArrayList<>();
     }
 
-    public Result(Id eventId, Organisation organisation, NolScoreCalculator.NolCategory nolCategory, boolean isTeamResult) {
+    public Result(Id eventId, Organisation organisation, NolScoreCalculator.NolCategory nolCategory, TeamResultType teamResultType) {
         
-        // Constructor for teams
+        // Use this Constructor for teams
         this.id = eventId;
         this.organisation = organisation;
         this.nolCategory = nolCategory;
-        this.isTeamResult = isTeamResult;
+        this.isTeamResult = true;
+        this.teamResultType = teamResultType;
         
         this.raceTimes = new ArrayList<>();
         this.athleteNames = new ArrayList<>();
@@ -112,6 +119,37 @@ public final class Result {
         // Sort times
         // TODO - should we keep Names and Times aligned so we can report who's times counted??
         Collections.sort(this.raceTimes);
+        
+        this.raceTime = 0;
+        for (int i=0; i< Math.min(this.raceTimes.size(),RUNNERS_TO_COUNT); i++){
+            
+            this.raceTime += this.raceTimes.get(i);
+            
+        }                             
+    }
+    
+    public void addIndividualResult(Result result){
+        
+        // Don't add DNFs and DSQs
+        if (!result.status){
+            return;
+        }
+        
+        this.raceTimes.add((double)result.getScore());
+        
+        // TODO use athlete names in Result objects so we can add them here
+        String athleteName = "TO DO"; 
+        this.athleteNames.add(athleteName);
+        
+        numberOfIndividualResults++;
+        
+        if (result.getPlacing() < this.bestIndividualPlacing){
+            this.bestIndividualPlacing = result.getPlacing();
+        }
+
+        // Update the team time 
+        // Sort SCORES (decreasing)
+        Collections.sort(this.raceTimes, Collections.reverseOrder());
         
         this.raceTime = 0;
         for (int i=0; i< Math.min(this.raceTimes.size(),RUNNERS_TO_COUNT); i++){
@@ -202,14 +240,14 @@ public final class Result {
     public int getBestIndividualPlacing() {
         return bestIndividualPlacing;
     }
-    
-    // TODO Fix hash
+
     @Override
     public int hashCode() {
-        int hash = 7;
+        int hash = 5;
+        hash = 37 * hash + Objects.hashCode(this.id);
         return hash;
     }
-
+        
      @Override
     public boolean equals(Object obj) {
         if (this == obj) {

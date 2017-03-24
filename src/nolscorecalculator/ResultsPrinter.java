@@ -6,7 +6,6 @@
 package nolscorecalculator;
 
 import IofXml30.java.Event;
-import IofXml30.java.Id;
 import NolXml10.NolClassResult;
 import NolXml10.NolEvent;
 import NolXml10.NolEventList;

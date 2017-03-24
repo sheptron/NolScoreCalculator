@@ -31,6 +31,22 @@ import static nolscorecalculator.NolScoreCalculator.DEV;
 public class EventorInterface {
     
     private static final String EVENTOR_BASE = "https://eventor.orienteering.asn.au/api/";
+    
+    public static EventList getEventList(String fromDate, String toDate) {
+    String classificationIds = "1,2"; // 1=Championship, 2=National
+
+            String eventorQuery = "events?fromDate=" + fromDate + "&toDate=" + toDate + "&classificationIds=" + classificationIds;
+            String iofXmlType = "EventList";
+
+            String xmlString = EventorInterface.getEventorData(eventorQuery, "From Date " + fromDate + " To Date " + toDate);
+
+            // Hack here - for some reason Eventor doesn't put in the iofVersion number so parsing the XML fails
+            xmlString = xmlString.replace("<EventList>", "<EventList xmlns=\"http://www.orienteering.org/datastandard/3.0\" iofVersion=\"3.0\">");
+
+            EventList eventList = JAXB.unmarshal(new StringReader(xmlString), EventList.class);
+            
+            return eventList;
+    }
 
     public static String getEventorData(String eventorQuery, String description) {
 
@@ -72,30 +88,7 @@ public class EventorInterface {
 
         return xmlString;
     }
-    
-    /*public static String getEventorData(String eventorQuery, String args) throws MalformedURLException, IOException{
-        
-        URL baseUrl = new URL(EVENTOR_BASE + eventorQuery + args);
-
-        URLConnection con = baseUrl.openConnection();
-
-        con.setRequestProperty("Accept", "application/xml");
-        con.setRequestProperty("ApiKey", API_KEY);
-        //con.setRequestProperty("eventId", args);
-
-        String xmlString;
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
-            xmlString = "";
-            String inputLine;
-            while ((inputLine = in.readLine()) != null) {
-                xmlString += inputLine;
-            }   System.out.println(inputLine);
-        }
-
-        return xmlString;
-        
-    }*/
-    
+            
     public static ResultList downloadResultList(EventList eventList, int eventIndex) throws Exception {
         
         String eventId = eventList.getEvent().get(eventIndex).getEventorId().getValue();
