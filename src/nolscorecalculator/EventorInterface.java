@@ -27,6 +27,10 @@ import static nolscorecalculator.NolScoreCalculator.DEV;
  * @author shep
  * 
  * TODO - could use results/organisation to grab selected (ie NOL) results only
+ * 
+ * Results from:
+ * https://eventor.orientering.se/api/results/event/iofxml
+ * Using (any) API key
  */
 public class EventorInterface {
     

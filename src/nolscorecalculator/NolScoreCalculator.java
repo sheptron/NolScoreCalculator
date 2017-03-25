@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
@@ -51,7 +52,7 @@ public class NolScoreCalculator {
     // TODO add number of races counting to html output
     // TODO filename: add number of races etc
     
-    public static final boolean DEV = true;
+    public static final boolean DEV = false;
 
     public static final String CREATOR = "Sheptron Industries";
     public static final String EVENT_SELECTION_DIALOG_STRING = "Select all the NOL races from the list below...";
@@ -129,8 +130,8 @@ public class NolScoreCalculator {
             }*/
             // END Testing
             
-            String fromDate = "2016-10-01";//"2017-03-01";
-            String toDate = "2016-10-3"; //2017-10-31";
+            String fromDate = "2017-03-01";//"2017-03-01";
+            String toDate = "2017-03-30"; //2017-10-31";
             
             EventList eventList = EventorInterface.getEventList(fromDate, toDate);
             
@@ -169,8 +170,7 @@ public class NolScoreCalculator {
             ArrayList<String> NOLSeasonEventString = new ArrayList<>();  
             ArrayList<Event> NOLSeasonEventList = new ArrayList<>();
 
-            // Get Results (https://eventor.orientering.se/api/results/event/iofxml)
-            // For each selected event
+            // Get Results For each selected event
             for (int i = 0; i < numberOfEvents; i++) {
              
                 //Id eventId = eventList.getEvent().get(indexOfSelectedEvents[i]).getId();                
@@ -187,50 +187,23 @@ public class NolScoreCalculator {
                     // Somethings gone wrong, nothing we can do! // TODO - try again in a little while??
                     continue;
                 }
-
-                // Testing
-                if (DEV){
-                    
-                    // Testing A/B finals - make M/W35A our M/W21E B finals
-                    for (ClassResult classResult : thisResultList.getClassResult()){
-                                                
-                        if (classResult.getClazz().getName().equals("M21E")){
-                            classResult.getClazz().setName("M21EA");
-                        }
-                        
-                        if (classResult.getClazz().getName().equals("W21E")){
-                            classResult.getClazz().setName("W21EA");
-                        }
-                        
-                        if (classResult.getClazz().getName().contains("M35A")){
-                            classResult.getClazz().setName("M21EB");
-                        }
-                        
-                         
-                        if (classResult.getClazz().getName().contains("W35A")){
-                            classResult.getClazz().setName("W21EB");
-                        }
-                        
-                    }                    
-                }
-                
-                // Testing
                 
                 // Keep a record of this event (want date of events to use for race numbers)
                 NOLSeasonEventList.add(thisResultList.getEvent());
                 Id eventId = thisResultList.getEvent().getId();
                 
                 // Find the right classes : this may be complicated if we have M/W21A instead of E
-                // Use E, if there's no E then use A
-                // TODO Consider A and B finals
+                // Use E, if there's no E then use A                
                 boolean usingEliteClasses = isUsingEliteClasses(thisResultList);
                 
+                // Team Result type is important: Normally we use sum of individual race times, 
+                // when we have A and B finals we use sum of individual scores
                 TeamResultType teamResultType = TeamResultType.Normal;
                 
                 boolean usingAandBfinals = false;
                 if (usingEliteClasses) usingAandBfinals = isUsingAandBfinals(thisResultList);
                     
-                // Merge Results for A and B finals if they exist (actually just edit Placing for B finalists)
+                // Merge Results for A and B finals if they exist (actually append B final to A final)
                 if (usingAandBfinals) {
                     thisResultList = mergeAandBfinals(thisResultList);
                     teamResultType = TeamResultType.AandBfinal;
@@ -244,10 +217,7 @@ public class NolScoreCalculator {
                         // Assign Points
                         
                         NolCategory nolCategory = getNolCategory(className);
-                        
-                        // TODO TODO TODO - we need to merge A and B final results otherwise this createEmptyNolteamREsults
-                        // means that the results will only be calculated using the last class we process (A or B final)
-                        //ArrayList<Result> nolTeamResults = new ArrayList<>();
+                                                
                         ArrayList<Result> nolTeamResults = createEmptyNolTeamResults(nolCategory, eventId, teamResultType);
                         
                         for (PersonResult personResult : classResult.getPersonResult()) {
@@ -314,8 +284,7 @@ public class NolScoreCalculator {
                         
                         // This class is finished so now assign team points
                         // Sort this last lot of results
-                        // TODO Relays - need to set isRelay boolen in team result!
-                        // TODO TODO TODO - 
+                        // TODO Relays - need to set isRelay boolen in team result!                         
                         switch (teamResultType){
                             case Normal :
                                 Collections.sort(nolTeamResults, new NolTeamResultCompare());
@@ -476,18 +445,22 @@ public class NolScoreCalculator {
     
     private static boolean isUsingAandBfinals(ResultList resultList) {
 
-        // TODO
-        boolean usingEliteClasses = false;
+        // Decide if there are Elite A and B classes
+        boolean usingEAclasses = false;
+        boolean usingEBclasses = false;
 
         // Run through and decide if we have Elite (E) or A classes
         for (int j = 0; j < resultList.getClassResult().size(); j++) {
             String className = resultList.getClassResult().get(j).getClazz().getName();
-            if (className.contains("M21E") || className.contains("W21E")) {
-                usingEliteClasses = true;
+            if (className.contains("M21EA") || className.contains("W21EA")) {
+                usingEAclasses = true;
+            }
+            if (className.contains("M21EB") || className.contains("W21EB")) {
+                usingEBclasses = true;
             }
         }
 
-        return usingEliteClasses;
+        return (usingEAclasses && usingEBclasses);
     }
     
     private static ResultList mergeAandBfinals(ResultList thisResultList){
@@ -497,11 +470,14 @@ public class NolScoreCalculator {
         // TODO - this could be done more cleverly
         // Grab the numbers in the A Finals
         
-        // Use a Map to kee ptrack of how many runners in each classes A Final
+        // Use a Map to keep track of how many runners in each classes A Final
         Map<NolCategory,Integer> sizeOfAfinals = new HashMap<>();               
         for (NolCategory nolCategory : NolCategory.values()){
             sizeOfAfinals.put(nolCategory, 0);
         }
+        
+        // Use a Map to keep track of where the A finals are in the result list
+        Map<NolCategory,Integer> locationOfAfinals = new HashMap<>();
         
         for (ClassResult classResult : thisResultList.getClassResult()){
             
@@ -513,7 +489,7 @@ public class NolScoreCalculator {
                 if (className.contains("A")){
                     // Assuming Only A finals have an "A" in the class name!
                     int numberOfRunnersInThisFinal = classResult.getPersonResult().size();
-                    sizeOfAfinals.put(nolCategory, numberOfRunnersInThisFinal);
+                    sizeOfAfinals.put(nolCategory, numberOfRunnersInThisFinal);                               
                 }
                 
             }                      
@@ -527,7 +503,7 @@ public class NolScoreCalculator {
             if (isValidClass(className, usingEliteClasses)) {
                 
                 NolCategory nolCategory = getNolCategory(className);
-                if (!className.contains("A")){
+                if (className.contains("B")){
                     // Assuming Only A finals have an "A" in the class name!
                     int numberOfRunnersInThisFinal = sizeOfAfinals.get(nolCategory);
                     
@@ -540,9 +516,25 @@ public class NolScoreCalculator {
                             personResult.getResult().get(0).setPosition(BigInteger.valueOf(newPosition));
                         }
                     }
+                 
+                    // Now find Corresponding A Final and add this class to it
+                    for (ClassResult anotherClassResult : thisResultList.getClassResult()) {
+                        String anotherClassName = anotherClassResult.getClazz().getName();
+                        NolCategory anotherNolCategory = getNolCategory(anotherClassName);
+                        if (isValidClass(anotherClassName, usingEliteClasses) && anotherNolCategory.equals(nolCategory) && anotherClassName.contains("A")) {
+                            // stick className on the end of anotherClassName
+                            int k = 0;
+                            
+                            List<PersonResult> anotherListPersonResults = anotherClassResult.getPersonResult();
+                            for (PersonResult personResult : classResult.getPersonResult()){
+                                anotherListPersonResults.add(personResult);
+                            }                            
+                        }
+                    }
                     
-                }
-                
+                    // change the name of the B class so we don't pick it up later (TODO can we remove it safely?)
+                    classResult.getClazz().setName("DO NOT USE");
+                }                                                
             }                      
         }
         
