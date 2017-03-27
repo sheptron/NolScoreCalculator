@@ -192,6 +192,9 @@ public class NolScoreCalculator {
                 NOLSeasonEventList.add(thisResultList.getEvent());
                 Id eventId = thisResultList.getEvent().getId();
                 
+                // Trim the Result List (get rid of non-NOL classes) - just to make things a bit quicker
+                thisResultList = trimResultList(thisResultList);
+                
                 // Find the right classes : this may be complicated if we have M/W21A instead of E
                 // Use E, if there's no E then use A                
                 boolean usingEliteClasses = isUsingEliteClasses(thisResultList);
@@ -445,6 +448,8 @@ public class NolScoreCalculator {
     
     private static boolean isUsingAandBfinals(ResultList resultList) {
 
+        // TODO create a list of possibilities here, eg: M21E-A, M21E A Final, M21E A-Final etc
+        // TODO make this a bit more generic and extend to C (and D) finals
         // Decide if there are Elite A and B classes
         boolean usingEAclasses = false;
         boolean usingEBclasses = false;
@@ -461,6 +466,18 @@ public class NolScoreCalculator {
         }
 
         return (usingEAclasses && usingEBclasses);
+    }
+    
+    private static ResultList trimResultList(ResultList resultList){
+        
+        // Remove all class results that are not NOL classes
+        boolean usingEliteClasses = isUsingEliteClasses(resultList);
+        
+        List<ClassResult> classResults = resultList.getClassResult();
+        
+        classResults.removeIf((ClassResult classResult) -> !isValidClass(classResult.getClazz().getName(), usingEliteClasses));
+        
+        return resultList;
     }
     
     private static ResultList mergeAandBfinals(ResultList thisResultList){
@@ -518,16 +535,14 @@ public class NolScoreCalculator {
                     }
                  
                     // Now find Corresponding A Final and add this class to it
-                    for (ClassResult anotherClassResult : thisResultList.getClassResult()) {
-                        String anotherClassName = anotherClassResult.getClazz().getName();
-                        NolCategory anotherNolCategory = getNolCategory(anotherClassName);
-                        if (isValidClass(anotherClassName, usingEliteClasses) && anotherNolCategory.equals(nolCategory) && anotherClassName.contains("A")) {
-                            // stick className on the end of anotherClassName
-                            int k = 0;
+                    for (ClassResult aFinalClassResult : thisResultList.getClassResult()) {
+                        String aFinalClassName = aFinalClassResult.getClazz().getName();
+                        NolCategory aFinalNolCategory = getNolCategory(aFinalClassName);
+                        if (isValidClass(aFinalClassName, usingEliteClasses) && aFinalNolCategory.equals(nolCategory) && aFinalClassName.contains("A")) {
                             
-                            List<PersonResult> anotherListPersonResults = anotherClassResult.getPersonResult();
+                            List<PersonResult> aFinalPersonResults = aFinalClassResult.getPersonResult();
                             for (PersonResult personResult : classResult.getPersonResult()){
-                                anotherListPersonResults.add(personResult);
+                                aFinalPersonResults.add(personResult);
                             }                            
                         }
                     }
