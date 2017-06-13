@@ -5,6 +5,7 @@
  */
 package nolscorecalculator;
 
+import IofXml30.java.Event;
 import IofXml30.java.EventList;
 import IofXml30.java.ResultList;
 import java.io.BufferedReader;
@@ -15,6 +16,9 @@ import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.xml.bind.DataBindingException;
@@ -118,6 +122,94 @@ public class EventorInterface {
             return new ResultList();
         }
     }
+    
+    public static ResultList downloadResultListForEventRaceId(String eventId, String eventRaceId) throws Exception {
+                
+        String eventorQuery = "results/event/iofxml?eventId=" + eventId + "&eventRaceId=" + eventRaceId;
+        String description = eventId + " : " + eventRaceId;
+        String xmlString = getEventorData(eventorQuery, description);
+          
+        if (xmlString.equals("")){
+            // Somethings gone wrong in the download
+            // We've alread shown a message - just make sure whoever asked for this data knows we've had an exception...
+            throw new IOException();
+        }
+        
+        try{        
+            // Testing ONLY
+            if (DEV) stringToFile(xmlString, description); // Dump downloaded XML to a file
+            
+            ResultList thisResultList = JAXB.unmarshal(new StringReader(xmlString), ResultList.class);        
+            return thisResultList;
+        }
+        catch (DataBindingException e){
+            return new ResultList();
+        }
+    }
+    
+    public static Event downloadEvent(String eventId)  throws Exception{
+        // https://eventor.orientering.se/api/event/{eventId}
+        String eventorQuery = "event/" + eventId;
+        String description = "";
+        
+        String xmlString = getEventorData(eventorQuery, description);
+          
+        if (xmlString.equals("")){
+            // Somethings gone wrong in the download
+            // We've alread shown a message - just make sure whoever asked for this data knows we've had an exception...
+            throw new IOException();
+        }
+        
+        try{        
+            // Testing ONLY
+            if (DEV) stringToFile(xmlString, description); // Dump downloaded XML to a file
+            
+            Event event = JAXB.unmarshal(new StringReader(xmlString), Event.class);        
+            return event;
+        }
+        catch (DataBindingException e){
+            return new Event();
+        }
+        
+        
+    }    
+    
+     public static ArrayList<String> downloadListOfEventRaceIds(String eventId)  throws Exception{
+        // https://eventor.orientering.se/api/event/{eventId}
+        String eventorQuery = "event/" + eventId;
+        String description = "";
+        
+        String patternString = "<EventRaceId>(\\d+)</EventRaceId>";               
+        
+        String xmlString = getEventorData(eventorQuery, description);        
+        
+        if (xmlString.equals("")){
+            // Somethings gone wrong in the download
+            // We've alread shown a message - just make sure whoever asked for this data knows we've had an exception...
+            throw new IOException();
+        }
+        
+        try{        
+            // Testing ONLY
+            if (DEV) stringToFile(xmlString, description); // Dump downloaded XML to a file
+            
+            ArrayList<String> eventRaceIds = new ArrayList<>();
+            
+            Pattern pattern = Pattern.compile(patternString);
+            Matcher matcher = pattern.matcher(xmlString);
+            
+            while(matcher.find()) {                                
+                eventRaceIds.add(matcher.group(1));        
+            }
+            return eventRaceIds;
+
+        }
+        catch (DataBindingException e){
+            return new ArrayList<>();
+        }
+        
+        
+    }   
     
     public static void stringToFile(String xmlSource, String description) throws IOException {
         

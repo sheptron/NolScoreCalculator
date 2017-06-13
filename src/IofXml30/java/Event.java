@@ -312,6 +312,10 @@ public class Event {
         return this.form;
     }
 
+    public void setForm(List<EventForm> form) {
+        this.form = form;
+    }
+
     /**
      * Gets the value of the organiser property.
      * 

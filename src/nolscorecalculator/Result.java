@@ -19,8 +19,12 @@ import java.util.Objects;
  */
 public final class Result {
     
+    /*
+    We can calculate team scores using sum of race times, NOL scores or race placing/position
+    We also need to consider relays
+    */
     public enum TeamResultType{
-        Normal, AandBfinal, Relay
+        RaceTimes, NolScores, Placings, Relay
     };
     
     public double raceTime = 0; // Total race time (of all counting runners)
@@ -128,8 +132,49 @@ public final class Result {
         }                             
     }
     
-    public void addIndividualResult(Result result){
+    public void addIndividualResult(PersonResult personResult, TeamResultType teamResultType){
         
+        // Don't add DNFs and DSQs
+        if (personResult.getResult().get(0).getStatus() != ResultStatus.OK){
+            return;
+        }
+        
+        switch(teamResultType){
+            case RaceTimes:
+                this.raceTimes.add(personResult.getResult().get(0).getTime());
+                break;
+            case Placings:
+                this.raceTimes.add(personResult.getResult().get(0).getPosition().doubleValue());
+                break;
+            default:
+                // Race Times
+                this.raceTimes.add(personResult.getResult().get(0).getTime());            
+        }       
+                
+        String athleteName = personResult.getPerson().getName().getGiven() + " " + personResult.getPerson().getName().getFamily();
+        this.athleteNames.add(athleteName);
+        
+        numberOfIndividualResults++;
+        
+        if (personResult.getResult().get(0).getPosition().intValue() < this.bestIndividualPlacing){
+            this.bestIndividualPlacing = personResult.getResult().get(0).getPosition().intValue();
+        }
+
+        // Update the team time 
+        // Sort times
+        // TODO - should we keep Names and Times aligned so we can report who's times counted??
+        Collections.sort(this.raceTimes);
+        
+        this.raceTime = 0;
+        for (int i=0; i< Math.min(this.raceTimes.size(),RUNNERS_TO_COUNT); i++){
+            
+            this.raceTime += this.raceTimes.get(i);
+            
+        }                             
+    }
+    
+    public void addIndividualResult(Result result){
+        // TODO think about merging these two addIndividualResult methods
         // Don't add DNFs and DSQs
         if (!result.status){
             return;

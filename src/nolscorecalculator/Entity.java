@@ -63,6 +63,7 @@ public class Entity {
     public NolScoreCalculator.NolTeamName nolTeamName;   
     
     public static final int MAX_NUMBER_OF_RACES_TO_COUNT = 9;
+    public static final int SENIORS_NUMBER_OF_RACES_TO_COUNT = 8;
     
     public boolean isTeam = false;
 
@@ -81,10 +82,15 @@ public class Entity {
             id = new Id();
             id.setValue("");
         }
-        if (personResult.getOrganisation() != null){                            
+        if (personResult.getOrganisation() != null){ 
+            
+            organisation = personResult.getOrganisation();
+            // Standardise Organisation/Team Names
+            standardiseOrganisationNames();
+            
             club = personResult.getOrganisation().getShortName();
             teamName = personResult.getOrganisation().getName();
-            organisation = personResult.getOrganisation();
+            
         }
         else {
             setEmptyOrganisation();
@@ -107,6 +113,25 @@ public class Entity {
         
         // Decide What the team name and category is based on the id        
     }
+    
+    private void standardiseOrganisationNames(){
+        
+        String thisOrganisationsName = this.organisation.getName();
+        if (thisOrganisationsName.length()<5){
+            String tryThis = NolScoreCalculator.nolOrganisationShortLongNamesMap().get(thisOrganisationsName);
+            if (tryThis != null){
+                this.organisation.setName(tryThis);
+            }
+        }
+        
+        String thisOrganisationsShortName = this.organisation.getShortName();
+        if (thisOrganisationsShortName.length()>4){
+            String tryThis = NolScoreCalculator.nolOrganisationLongShortNamesMap().get(thisOrganisationsShortName);
+            if (tryThis != null){
+                this.organisation.setShortName(tryThis);
+            }
+        }
+    }   
     
     private void setEmptyOrganisation(){
         
@@ -201,12 +226,19 @@ public class Entity {
         if (numberOfEvents < 8) {
             numberOfRaceToCount = (int) Math.ceil((double) numberOfEvents / 2.0) + 1;
         } else {
+            
+            if (this.nolCategory==NolScoreCalculator.NolCategory.SeniorMen || this.nolCategory==NolScoreCalculator.NolCategory.SeniorWomen){
+                return SENIORS_NUMBER_OF_RACES_TO_COUNT;                    
+            }
+            
             numberOfRaceToCount = (int) Math.ceil((double) numberOfEvents / 2.0);
-        }
+        }                
         
         if (numberOfRaceToCount > MAX_NUMBER_OF_RACES_TO_COUNT) {
             numberOfRaceToCount = MAX_NUMBER_OF_RACES_TO_COUNT;
-        }
+        }        
+        
+        if (numberOfRaceToCount > numberOfEvents) return numberOfEvents;
         
         return numberOfRaceToCount;
     }
@@ -260,13 +292,23 @@ public class Entity {
         }
         final Entity other = (Entity) obj;
         if (!this.id.getValue().equals(other.id.getValue())) {
-            return false;
+            // return false;
+
+            /* Normally we'd return false here but check names and NOL
+            teams match in case we have results with Eventor IDs missing */
+            // TODO team names are CC A in OCeania and Canberra Cockatoos in other races... fix this!
+            if (!this.getName().equals(other.getName())){         
+            //if (!this.getName().equals(other.getName()) || !this.getTeamName().equals(other.getTeamName())){         
+                return false;
+            }
+            /**/
         }
         if (this.nolCategory != other.nolCategory) {
             return false;
         }
         if (this.id.getValue().isEmpty()){
-            return false;
+            // We're having some Oceania results with NULL Id
+            //return false;
         }
         return true;
     }    

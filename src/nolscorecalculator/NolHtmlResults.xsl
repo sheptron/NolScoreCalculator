@@ -25,6 +25,7 @@
                 <tr>
                 <th>Place</th>
                 <th>Name</th>
+                <th>Team</th>
                 <th>Total</th>
                 <xsl:for-each select="NolEventList/Event">
                 <th><div title="{Name}"><xsl:value-of select="RaceNumber"/></div></th>      
@@ -35,6 +36,7 @@
                     <tr>
                     <td><xsl:value-of select="Place"/></td>
                     <td><xsl:value-of select="Name"/></td>
+                    <td><xsl:value-of select="Team"/></td>
                     <td><xsl:value-of select="Total"/></td>    
                     <xsl:for-each select="Result">                    
                         <td><xsl:value-of select="Score"/></td>
