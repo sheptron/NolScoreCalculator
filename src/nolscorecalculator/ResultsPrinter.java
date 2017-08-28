@@ -23,8 +23,16 @@ import static nolscorecalculator.NolScoreCalculator.CREATOR;
 import NolXml10.NolPersonResult;
 import NolXml10.NolResultList;
 import NolXml10.ObjectFactory;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.Collections;
 import java.util.Map;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.stream.StreamSource;
 
 /**
  *
@@ -38,7 +46,7 @@ public class ResultsPrinter {
     public ResultsPrinter() {
     }
     
-    public void allResultsToNolXml(ArrayList<Entity>[] fullResultList, Map<Integer, Event> nolRaceNumberToId, String outputDirectory) throws JAXBException {
+    public void allResultsToNolXml(ArrayList<Entity>[] fullResultList, Map<Integer, Event> nolRaceNumberToId, String outputDirectory) throws JAXBException, IOException, FileNotFoundException, TransformerException {
         
         // Produce the XML then use an XSL template to produce a HTML results file                
         
@@ -142,15 +150,19 @@ public class ResultsPrinter {
 
         resultList.setNolClassResult(classResults);
         
-        File tempFile = new File(outputDirectory, "NOL_Results.xml");
-        File outFile = new File(outputDirectory, "NOL_Results.html");
+        String outFileName = "NOL_Results_After_Round_" + String.format("%d", nolRaceNumberToId.size());
+        
+        File tempFile = new File(outputDirectory, outFileName + ".xml");
+        File outFile = new File(outputDirectory, outFileName + ".html");
 
         JAXBContext jaxbContext = JAXBContext.newInstance("NolXml10");
         Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
 
         jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
 
-        jaxbMarshaller.marshal(resultList, tempFile);
+        StringWriter xmlStringWriter = new StringWriter();       
+        jaxbMarshaller.marshal(resultList, xmlStringWriter);
+        //jaxbMarshaller.marshal(resultList, tempFile);
 
         // Now convert to HTML
         try {
@@ -158,15 +170,24 @@ public class ResultsPrinter {
 
             Transformer transformer
                     = tFactory.newTransformer(new javax.xml.transform.stream.StreamSource("src/nolscorecalculator/NolHtmlResults.xsl"));
-
-            // TODO get save file location from user
-            transformer.transform(new javax.xml.transform.stream.StreamSource(tempFile),
-                    new javax.xml.transform.stream.StreamResult(new FileOutputStream(outFile)));
             
-            // TODO - should we delete the XML file?
-        } catch (Exception e) {
-            e.printStackTrace();
+            transformer.transform( new StreamSource(new StringReader(xmlStringWriter.toString())), 
+                    new javax.xml.transform.stream.StreamResult(new FileOutputStream(outFile)));
+
+            //transformer.transform(new javax.xml.transform.stream.StreamSource(tempFile),
+            //        new javax.xml.transform.stream.StreamResult(new FileOutputStream(outFile)));
+            
+        } catch (FileNotFoundException | TransformerException e) {
+            throw e;
         }
+        
+        // Delete the temporary XML file here - 
+        /*try {
+            tempFile.delete();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }*/
 
     }    
 

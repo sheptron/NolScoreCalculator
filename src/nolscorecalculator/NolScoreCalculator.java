@@ -25,13 +25,17 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFileChooser;
+import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 import javax.xml.bind.JAXBException;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 import nolscorecalculator.Result.TeamResultType;
 import org.xml.sax.SAXException;
 
@@ -45,6 +49,10 @@ public class NolScoreCalculator {
     // TODO mouse over race name on all scores
     // TODO add number of races counting to html output
     // TODO filename: add number of races etc
+    // TODO handle relays
+    // TODO handle classes being voided or cancelled
+    // TODO user select date range
+    
     public static final boolean DEV = false;
 
     public static final String CREATOR = "Sheptron Industries";
@@ -97,8 +105,8 @@ public class NolScoreCalculator {
      * @throws javax.xml.bind.JAXBException
      * @throws org.xml.sax.SAXException
      */
-    public static void main(String[] args) throws MalformedURLException, IOException, JAXBException, SAXException, ParserConfigurationException {
-        {
+    public static void main(String[] args)  {
+        { //throws MalformedURLException, IOException, JAXBException, SAXException, ParserConfigurationException
             // TODO get dates to/from from user       
             //DateSelector dateSelector = new DateSelector(); 
             //String startDate = dateSelector.getStartDate();
@@ -133,7 +141,7 @@ public class NolScoreCalculator {
             }*/
             // END Testing
             String fromDate = "2017-03-01";//"2017-03-01";
-            String toDate = "2017-06-18"; //2017-10-31";
+            String toDate = "2017-12-31"; //2017-10-31";
 
             EventList eventList = EventorInterface.getEventList(fromDate, toDate);
 
@@ -187,14 +195,11 @@ public class NolScoreCalculator {
                     eventRaceIds = EventorInterface.downloadListOfEventRaceIds(eventIdString);
                     //thisResultList = EventorInterface.downloadResultListForEventRaceId(eventIdString, eventRaceId);
                 } catch (Exception e) {
-                    // Somethings gone wrong, nothing we can do! // TODO - try again in a little while??
+                    // Somethings gone wrong, nothing we can do! We've already given the user a warning...
+                    // TODO - try again in a little while?? shuffle this one back into the list??
                     continue;
                 }
-
-                // Keep a record of this event (want date of events to use for race numbers)
-                //NOLSeasonEventList.add(thisResultList.getEvent());
-                
-
+              
                 // Trim the Result List (get rid of non-NOL classes) - just to make things a bit quicker
                 ArrayList<ClassResultExtended> resultList = trimResultList(thisResultList);
                 // TODO trimResults needs to remove B finals for juniors
@@ -222,19 +227,6 @@ public class NolScoreCalculator {
                     
                     NOLSeasonEventList.add(thisEvent);                                                          
                     
-                    // Find the right classes : this may be complicated if we have M/W21A instead of E
-                    // Use E, if there's no E then use A                
-                    //boolean usingEliteClasses = isUsingEliteClasses(thisResultList);
-                    // Team Result type is important: Normally we use sum of individual race times, 
-                    // when we have A and B finals we use sum of individual scores
-                    //TeamResultType teamResultType = TeamResultType.RaceTimes;
-                    //boolean usingAandBfinals = false;
-                    //if (usingEliteClasses) usingAandBfinals = isUsingAandBfinals(thisResultList);
-                    // Merge Results for A and B finals if they exist (actually append B final to A final)
-                    //if (usingAandBfinals) {
-                    //    thisResultList = mergeAandBfinals(thisResultList);
-                    //    teamResultType = TeamResultType.NolScores;
-                    // }
                     // Go Through Each Class And Process Results
                     for (ClassResultExtended classResult : resultList) {
                         String className = classResult.getClazz().getName();
@@ -245,7 +237,7 @@ public class NolScoreCalculator {
                     Decide here which method we should use to calculate team result
                     It may be different for different classes
                          */
-                        //if (isValidClass(className, usingEliteClasses)) {
+
                         // Assign Points
                         NolCategory nolCategory = getNolCategory(className);
 
@@ -281,7 +273,7 @@ public class NolScoreCalculator {
                             Result nolResult = new Result(personResult, eventId);
 
                             // Do we need a new athlete or create a new one?
-                            if (NOLSeasonResults.contains(nolAthlete)) {
+                            if (NOLSeasonResults.contains(nolAthlete)) {                                
                                 // The NOL Athlete exists so add this races result
                                 int k = NOLSeasonResults.indexOf(nolAthlete);
                                 NOLSeasonResults.get(k).addResult(nolResult);
@@ -320,7 +312,7 @@ public class NolScoreCalculator {
 
                         // This class is finished so now assign team points
                         // Sort this last lot of results
-                        // TODO Relays - need to set isRelay boolen in team result!                         
+                        // TODO Relays - need to set isRelay boolean in team result!                         
                         switch (teamResultType) {
                             case NolScores:
                                 Collections.sort(nolTeamResults, new NolTeamResultAandBfinalsCompare());
@@ -346,8 +338,7 @@ public class NolScoreCalculator {
                             // Add this result 
 
                             NOLSeasonTeams[nolCategory.ordinal()].get(indexOfNolTeam).addResult(nolTeamResult);
-                        }
-                        //}
+                        }                        
                     }
                 }
             }
@@ -411,8 +402,7 @@ public class NolScoreCalculator {
             ArrayList<Entity> juniorWomenResults = new ArrayList<>();
             ArrayList<Entity> seniorMenResults = new ArrayList<>();
             ArrayList<Entity> seniorWomenResults = new ArrayList<>();
-            for (Entity nolAthlete : NOLSeasonResults) {
-                //NolCategory nolCategory = nolAthlete.getNolCategory();
+            for (Entity nolAthlete : NOLSeasonResults) {                
                 switch (nolAthlete.getNolCategory()) {
                     case SeniorMen:
                         seniorMenResults.add(nolAthlete);
@@ -444,8 +434,17 @@ public class NolScoreCalculator {
             String outputDirectory = getOutputDirectory();
 
             ResultsPrinter resultsPrinter = new ResultsPrinter();
-            // // TODO out of bounds exception here when empty
-            resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToEvent, outputDirectory);
+
+                // // TODO out of bounds exception here when empty
+                try { 
+                resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToEvent, outputDirectory);          
+                }
+                catch(JAXBException | IOException | TransformerException e){
+                    // Notify The User Something has Gone Wrong
+                    //JFrame frame = new JFrame("Warning");
+                    JOptionPane.showMessageDialog(new JFrame(), e.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
+                    System.exit(0);
+                }
         }
     }
 

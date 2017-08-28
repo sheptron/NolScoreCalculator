@@ -225,13 +225,15 @@ public class Entity {
         // Count an extra race early on in the season
         if (numberOfEvents < 8) {
             numberOfRaceToCount = (int) Math.ceil((double) numberOfEvents / 2.0) + 1;
-        } else {
+        } 
+        else {
             
             if (this.nolCategory==NolScoreCalculator.NolCategory.SeniorMen || this.nolCategory==NolScoreCalculator.NolCategory.SeniorWomen){
                 return SENIORS_NUMBER_OF_RACES_TO_COUNT;                    
             }
             
-            numberOfRaceToCount = (int) Math.ceil((double) numberOfEvents / 2.0);
+            // TODO this is a hack - we need to sort out how to achieve this properly
+            numberOfRaceToCount = 8; //(int) Math.ceil((double) numberOfEvents / 2.0);
         }                
         
         if (numberOfRaceToCount > MAX_NUMBER_OF_RACES_TO_COUNT) {
@@ -292,7 +294,7 @@ public class Entity {
         }
         final Entity other = (Entity) obj;
         if (!this.id.getValue().equals(other.id.getValue())) {
-            // return false;
+            //return false;
 
             /* Normally we'd return false here but check names and NOL
             teams match in case we have results with Eventor IDs missing */
@@ -301,7 +303,7 @@ public class Entity {
             //if (!this.getName().equals(other.getName()) || !this.getTeamName().equals(other.getTeamName())){         
                 return false;
             }
-            /**/
+            
         }
         if (this.nolCategory != other.nolCategory) {
             return false;
