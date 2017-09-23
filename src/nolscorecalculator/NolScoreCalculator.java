@@ -9,35 +9,34 @@ import IofXml30.java.ClassResult;
 import IofXml30.java.Event;
 import IofXml30.java.EventForm;
 import IofXml30.java.EventList;
-import IofXml30.java.EventRaceId;
 import IofXml30.java.Id;
 import IofXml30.java.Organisation;
 import IofXml30.java.PersonResult;
 import IofXml30.java.ResultList;
 import IofXml30.java.ResultStatus;
+import IofXml30.java.TeamResult;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.net.MalformedURLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JFileChooser;
+import javax.swing.JFormattedTextField.AbstractFormatter;
 import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 import javax.xml.bind.JAXBException;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import nolscorecalculator.Result.TeamResultType;
-import org.xml.sax.SAXException;
 
 /**
  *
@@ -48,12 +47,12 @@ public class NolScoreCalculator {
     // TODO Juniors included in Senior results for Sprint Races (just dodgy this up)  
     // TODO mouse over race name on all scores
     // TODO add number of races counting to html output
-    // TODO filename: add number of races etc
-    // TODO handle relays
+    // TODO filename: add YEAR    
     // TODO handle classes being voided or cancelled
     // TODO user select date range
+    // TODO kill dialog threads when necessary
     
-    public static final boolean DEV = false;
+    public static final boolean DEV = true;
 
     public static final String CREATOR = "Sheptron Industries";
     public static final String EVENT_SELECTION_DIALOG_STRING = "Select all the NOL races from the list below...";
@@ -100,10 +99,6 @@ public class NolScoreCalculator {
 
     /**
      * @param args the command line arguments
-     * @throws java.net.MalformedURLException
-     * @throws javax.xml.parsers.ParserConfigurationException
-     * @throws javax.xml.bind.JAXBException
-     * @throws org.xml.sax.SAXException
      */
     public static void main(String[] args)  {
         { //throws MalformedURLException, IOException, JAXBException, SAXException, ParserConfigurationException
@@ -111,7 +106,11 @@ public class NolScoreCalculator {
             //DateSelector dateSelector = new DateSelector(); 
             //String startDate = dateSelector.getStartDate();
             //int jkl = 0;
-
+            //dateSelector.dispose();
+            
+            //EventorDateSelector dateSelector = new EventorDateSelector();
+            //dateSelector.run();
+            
             // Testing                      
             /*
             Map<Integer, Event> num2Event = new HashMap<>();         
@@ -141,7 +140,12 @@ public class NolScoreCalculator {
             }*/
             // END Testing
             String fromDate = "2017-03-01";//"2017-03-01";
-            String toDate = "2017-12-31"; //2017-10-31";
+            String toDate = "2017-10-31"; //2017-10-31";
+            
+            // The last (individual) race of the season scores (3) extra points            
+            Event lastIndividualEvent = new Event();
+            
+            //JDatePicker jDatePicker = new JDatePicker();
 
             EventList eventList = EventorInterface.getEventList(fromDate, toDate);
 
@@ -168,10 +172,12 @@ public class NolScoreCalculator {
             }
 
             indexOfSelectedEvents = list.getSelectedIndices();
-
+            
+            // TODO make sure these are in date order (they usually are coming from Eventor)
+            
             int numberOfEvents = indexOfSelectedEvents.length;
-            int numberOfRaces = 0;    // Thise is for where an event has multiple races
-
+            int numberOfRaces = 0;    // Thise is for where an event has multiple races                       
+            
             // Create a List of NOL Athletes to store all our results in
             ArrayList<Entity> NOLSeasonResults = new ArrayList<>();
 
@@ -198,7 +204,10 @@ public class NolScoreCalculator {
                     // Somethings gone wrong, nothing we can do! We've already given the user a warning...
                     // TODO - try again in a little while?? shuffle this one back into the list??
                     continue;
-                }
+                }            
+                
+                // TODO RELAYS
+                boolean isRelay = thisResultList.getEvent().getForm().get(0).equals(EventForm.RELAY);                
               
                 // Trim the Result List (get rid of non-NOL classes) - just to make things a bit quicker
                 ArrayList<ClassResultExtended> resultList = trimResultList(thisResultList);
@@ -230,82 +239,112 @@ public class NolScoreCalculator {
                     // Go Through Each Class And Process Results
                     for (ClassResultExtended classResult : resultList) {
                         String className = classResult.getClazz().getName();
-
-                        TeamResultType teamResultType = classResult.getTeamResultType();
+                        
+                        TeamResultType teamResultType = classResult.getTeamResultType();                                                
 
                         /* 
-                    Decide here which method we should use to calculate team result
-                    It may be different for different classes
+                        Decide here which method we should use to calculate team result
+                        It may be different for different classes
                          */
-
                         // Assign Points
                         NolCategory nolCategory = getNolCategory(className);
 
                         ArrayList<Result> nolTeamResults = createEmptyNolTeamResults(nolCategory, eventId, teamResultType);
 
-                        for (PersonResult personResult : classResult.getPersonResult()) {
+                        if (isRelay) {
 
-                            // Individual
-                            // To deal with runners that compete in Junior and Senior we 
-                            // split an athlete into a Junior and a Senior version...
-                            // Ignore someone if they didn't start - otherwise non-OK status will get ZERO points
-                            if (personResult.getResult().get(0).getStatus() == ResultStatus.DID_NOT_START) {
-                                continue;
-                            }
-                            if (personResult.getResult().get(0).getStatus() == ResultStatus.INACTIVE) {
-                                continue;
-                            }
-                            if (personResult.getResult().get(0).getRaceNumber().intValue() != raceNumber) {
-                                continue;
-                            }
+                            int numberOfLegs = classResult.getClazz().getMinNumberOfTeamMembers().intValue();
+                            // TODO could make this cleaner - but we need nolTeamResults to be the right type, 
+                            // TODO createEmptyNolTeamResults constructor should set isRelay, OR do we need isRelay? can we just use TeamResultType?
+                            nolTeamResults = createEmptyNolTeamResults(nolCategory, eventId, TeamResultType.Relay);                                                                                   
+                            
+                            /*
+                            in thisResultList
+                            event -> form[0] = "RELAY"                            
+                             */
+                            
+                            for (TeamResult teamResult : classResult.getTeamResult()) {
+                                
+                                if (DEV) {
+                                    // DEV ONLY - translate club into state team (2016 had no NOL teams in Eventor)
+                                    Organisation organisation = teamResult.getOrganisation().get(0);
+                                    organisation = testingOnlyTranslateOrganisationId(organisation, teamResult);
+                                    teamResult.getOrganisation().get(0).setId(organisation.getId());
+                                    teamResult.getOrganisation().get(0).setName(organisation.getName());
+                                    teamResult.getOrganisation().get(0).setShortName(organisation.getShortName());
+                                    // END DEV ONLY
+                                }
+                                
+                                // Find the right team result and add this teamResult to it (if a team result already exists it will only replace it if the time is faster)
+                                // TODO speedup : keep an index to lookup rather than loop through
+                                for (Result res : nolTeamResults) {
+                                    // Check Organisation Id Value                                
+                                    if (res.getOrganisation().getId().getValue().equals(teamResult.getOrganisation().get(0).getId().getValue())) {
 
-                            if (DEV) {
-                                // DEV ONLY - translate club into state team (2016 had no NOL teams in Eventor)
-                                // Note some races - eg Melbourne Sprint races will fail here... no N/A/W/Q etc appended at end of club names!
-                                Organisation organisation = personResult.getOrganisation();
-                                organisation = testingOnlyTranslateOrganisationId(organisation);
-                                personResult.setOrganisation(organisation);
-                                // END DEV ONLY
-                            }
-
-                            // Create NOL Athlete and Result from the IOF PersonResult
-                            Entity nolAthlete = new Entity(personResult, nolCategory);
-                            Result nolResult = new Result(personResult, eventId);
-
-                            // Do we need a new athlete or create a new one?
-                            if (NOLSeasonResults.contains(nolAthlete)) {                                
-                                // The NOL Athlete exists so add this races result
-                                int k = NOLSeasonResults.indexOf(nolAthlete);
-                                NOLSeasonResults.get(k).addResult(nolResult);
-                            } else {
-                                // Creating a new NOL Athlete and add them to the seasons result list
-                                nolAthlete.addResult(nolResult);
-                                NOLSeasonResults.add(nolAthlete);
-                            }
-
-                            // Team 
-                            if (personResult.getOrganisation() == null || personResult.getOrganisation().getId() == null) {
-                                // This person isn't in a team
-                                continue;
-                            }
-
-                            // Find the right team result and add this personResult to it
-                            // TODO speedup : keep an index to lookup rather than loop through
-                            for (Result res : nolTeamResults) {
-                                // Check Organisation Id Value                                
-                                if (res.getOrganisation().getId().getValue().equals(personResult.getOrganisation().getId().getValue())) {
-
-                                    switch (teamResultType) {
-                                        case RaceTimes:
-                                            res.addIndividualResult(personResult); // Add result
-                                            break;
-                                        case Placings:
-                                            res.addIndividualResult(personResult, teamResultType);
-                                            break;
-                                        case NolScores:
-                                            res.addIndividualResult(nolResult);
+                                        res.isRelay = true;
+                                        res.addRelayResult(teamResult, numberOfLegs);
+                                        break;   // No need to keep looking in nolTeamResults
                                     }
-                                    break;   // No need to keep looking in nolTeamResults
+                                }
+                            }
+                            
+                        } 
+                        else {
+                            for (PersonResult personResult : classResult.getPersonResult()) {
+
+                                // Individual
+                                // To deal with runners that compete in Junior and Senior we 
+                                // split an athlete into a Junior and a Senior version...
+                                // Ignore someone if they didn't start - otherwise non-OK status will get ZERO points
+                                if (personResult.getResult().get(0).getStatus() == ResultStatus.DID_NOT_START) {
+                                    continue;
+                                }
+                                if (personResult.getResult().get(0).getStatus() == ResultStatus.INACTIVE) {
+                                    continue;
+                                }
+                                if (personResult.getResult().get(0).getRaceNumber().intValue() != raceNumber) {
+                                    continue;
+                                }
+                               
+                                // Create NOL Athlete and Result from the IOF PersonResult
+                                Entity nolAthlete = new Entity(personResult, nolCategory);
+                                Result nolResult = new Result(personResult, eventId);
+
+                                // Do we need a new athlete or create a new one?
+                                if (NOLSeasonResults.contains(nolAthlete)) {
+                                    // The NOL Athlete exists so add this races result
+                                    int k = NOLSeasonResults.indexOf(nolAthlete);
+                                    NOLSeasonResults.get(k).addResult(nolResult);
+                                } else {
+                                    // Creating a new NOL Athlete and add them to the seasons result list
+                                    nolAthlete.addResult(nolResult);
+                                    NOLSeasonResults.add(nolAthlete);
+                                }
+
+                                // Team 
+                                if (personResult.getOrganisation() == null || personResult.getOrganisation().getId() == null) {
+                                    // This person isn't in a team
+                                    continue;
+                                }
+
+                                // Find the right team result and add this personResult to it
+                                // TODO speedup : keep an index to lookup rather than loop through
+                                for (Result res : nolTeamResults) {
+                                    // Check Organisation Id Value                                
+                                    if (res.getOrganisation().getId().getValue().equals(personResult.getOrganisation().getId().getValue())) {
+
+                                        switch (teamResultType) {
+                                            case RaceTimes:
+                                                res.addIndividualResult(personResult); // Add result
+                                                break;
+                                            case Placings:
+                                                res.addIndividualResult(personResult, teamResultType);
+                                                break;
+                                            case NolScores:
+                                                res.addIndividualResult(nolResult);
+                                        }
+                                        break;   // No need to keep looking in nolTeamResults
+                                    }
                                 }
                             }
                         }
@@ -353,11 +392,22 @@ public class NolScoreCalculator {
                     // TODO Prompt the user whether this was an individual result
                 } else if (event.getForm().get(0) == EventForm.INDIVIDUAL) {
                     numberOfIndividualEvents += 1;
+                    lastIndividualEvent = event;
                 }
             }
+            
+            // Check with User if this is the final individual race of the season
+            boolean lastIndividualRaceOfSeason = promptUserConfirmLastRaceOfSeason(lastIndividualEvent);
 
             // Calculate Total Individual Scores            
             for (Entity nolAthlete : NOLSeasonResults) {
+             
+                // First update score from final race of season
+                if (lastIndividualRaceOfSeason) {                    
+                        nolAthlete.setEventResultToFinalForSeason(lastIndividualEvent);
+                }
+
+                // Now update this athletes total score for the season
                 nolAthlete.updateTotalScore(numberOfIndividualEvents);
             }
 
@@ -446,6 +496,16 @@ public class NolScoreCalculator {
                     System.exit(0);
                 }
         }
+    }
+    
+    private static boolean promptUserConfirmLastRaceOfSeason(Event lastIndividualEvent) {
+        
+        String lastIndEventPromptString = "Is " + lastIndividualEvent.getName() + " the last individual race of the season?";
+        int lastIndEventSelection = JOptionPane.showConfirmDialog(null, lastIndEventPromptString, "Important!", JOptionPane.YES_NO_OPTION);
+        if (lastIndEventSelection == JOptionPane.YES_OPTION) {
+            return true;            
+        }
+        else return false;
     }
 
     private static String getFileExtension(File file) {
@@ -663,6 +723,7 @@ public class NolScoreCalculator {
         scores etc)
 
          */
+        // TODO check for relays
         // TODO We need to treat junior and senior classes differently: we may have the case
         // where we have M/W21E and M/W20A + M/W18A.
         // First go through and decide which classes to keep
@@ -913,28 +974,29 @@ public class NolScoreCalculator {
         return nolTeamResults;
     }
 
-    private static Organisation testingOnlyTranslateOrganisationId(Organisation organisation) {
+    private static Organisation testingOnlyTranslateOrganisationId(Organisation organisation, TeamResult teamResult) {
 
         // When testing on 2016 results
         Organisation newOrganisation = new Organisation();
         Id id = new Id();
         // The last letter in the short name is the state
         String shortName = organisation.getShortName();
+        String teamName = teamResult.getName().toLowerCase();
 
         String x = "";
-        if (shortName.endsWith("V")) {
+        if (teamName.contains("vic")) { //(shortName.endsWith("V")) {
             x = "628";
-        } else if (shortName.endsWith("A")) {
+        } else if (teamName.contains("act")) {//(shortName.endsWith("A")) {
             x = "629";
-        } else if (shortName.endsWith("N")) {
+        } else if (teamName.contains("nsw")) { //(shortName.endsWith("N")) {
             x = "630";
-        } else if (shortName.endsWith("Q")) {
+        } else if (teamName.contains("qld")) { //(shortName.endsWith("Q")) {
             x = "631";
-        } else if (shortName.endsWith("S")) {
+        } else if (teamName.contains("sa")) { //(shortName.endsWith("S")) {
             x = "632";
-        } else if (shortName.endsWith("T")) {
+        } else if (teamName.contains("tas")) { //(shortName.endsWith("T")) {
             x = "633";
-        } else if (shortName.endsWith("W")) {
+        } else if (teamName.contains("wa")) { //(shortName.endsWith("W")) {
             x = "634";
         } else {
             x = "0";
@@ -943,8 +1005,31 @@ public class NolScoreCalculator {
         id.setValue(x);
         newOrganisation.setId(id);
         newOrganisation.setName(nolOrganisations.get(x));
+        newOrganisation.setShortName(nolOrganisationLongShortNamesMap().get(nolOrganisations.get(x)));
 
         return newOrganisation;
     }
+    
+    public static class DateLabelFormatter extends AbstractFormatter {
+
+    private String datePattern = "yyyy-MM-dd";
+    private SimpleDateFormat dateFormatter = new SimpleDateFormat(datePattern);
+
+    @Override
+    public Object stringToValue(String text) throws ParseException {
+        return dateFormatter.parseObject(text);
+    }
+
+    @Override
+    public String valueToString(Object value) throws ParseException {
+        if (value != null) {
+            Calendar cal = (Calendar) value;
+            return dateFormatter.format(cal.getTime());
+        }
+
+        return "";
+    }
+
+}
 
 }

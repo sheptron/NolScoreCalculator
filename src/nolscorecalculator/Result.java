@@ -9,6 +9,9 @@ import IofXml30.java.Id;
 import IofXml30.java.Organisation;
 import IofXml30.java.PersonResult;
 import IofXml30.java.ResultStatus;
+import IofXml30.java.TeamMemberResult;
+import IofXml30.java.TeamResult;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Objects;
@@ -33,6 +36,7 @@ public final class Result {
     public Id id;
     public boolean status;
     private boolean isTeamResult = false;
+    private boolean isFinalRaceOfSeason = false;
     public TeamResultType teamResultType;
     
     public static final int [] TEAM_SCORES = {9, 7, 5, 4, 3, 2, 1};
@@ -40,6 +44,8 @@ public final class Result {
     public static final int RUNNERS_TO_COUNT = 3;
     
     private static final int [] INDIVIDUAL_SCORES = {30, 27, 24, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+    
+    private static final int [] INDIVIDUAL_SCORES_FINAL_RACE = {33, 30, 27, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
     
     public Organisation organisation;
     public NolScoreCalculator.NolCategory nolCategory;
@@ -204,15 +210,49 @@ public final class Result {
         }                             
     }
     
+    public void addRelayResult(TeamResult teamResult, int numberOfLegs){               
+               
+        // Don't add DNFs and DSQs
+        for (TeamMemberResult teamMemberResult : teamResult.getTeamMemberResult()) {
+                       
+            if (teamMemberResult.getResult().get(0).getOverallResult().getStatus() != ResultStatus.OK){            
+                return;
+            }
+        
+        }        
+        
+        // Add result, first need to find the last leg runner
+        for (TeamMemberResult teamMemberResult : teamResult.getTeamMemberResult()) {
+                        
+            if (teamMemberResult.getResult().get(0).getLeg().intValue() == numberOfLegs) {
+                
+                // We only want to count the fastest (relay) team if there are 2+ relay teams running for the same NOL team
+                // raceTime is 0.0 to start with so check for this
+                double newRaceTime = teamMemberResult.getResult().get(0).getOverallResult().getTime();
+                if (this.raceTime > newRaceTime || this.raceTime == 0) {                         
+                    this.raceTime = newRaceTime;
+                    this.numberOfIndividualResults = 1;
+                }
+            }            
+        }                                             
+    }
+    
     public void calculateScore(){
                 
         // TODO Final Race + 3 and points down to 28
         
         int[] scores;
-        if (this.isTeamResult) scores = TEAM_SCORES;
-        else scores = INDIVIDUAL_SCORES;
+        if (this.isTeamResult) {
+            scores = TEAM_SCORES;
+        }
+        else if (this.isFinalRaceOfSeason) {
+            scores = INDIVIDUAL_SCORES_FINAL_RACE;
+        }
+        else {   
+            scores = INDIVIDUAL_SCORES;
+        }
          
-        if (this.placing <= scores.length){
+        if (this.placing <= scores.length && this.placing > 0){
             this.score = scores[this.placing-1];
         }
 
@@ -286,6 +326,14 @@ public final class Result {
         return bestIndividualPlacing;
     }
 
+    public boolean isIsFinalRaceOfSeason() {
+        return isFinalRaceOfSeason;
+    }
+
+    public void setIsFinalRaceOfSeason(boolean isFinalRaceOfSeason) {
+        this.isFinalRaceOfSeason = isFinalRaceOfSeason;
+    }       
+
     @Override
     public int hashCode() {
         int hash = 5;
@@ -310,16 +358,4 @@ public final class Result {
         }
         return true;
     }
-    
-//    private static int calculatePointScore(int[] SCORE_TABLE, int placing){
-//        int score = 0;
-//        
-//        // TODO Final Race + 3 and points down to 28
-//         
-//        if (placing <= SCORE_TABLE.length){
-//            score = SCORE_TABLE[placing-1];
-//        }
-//        
-//        return score;
-//    }
 }

@@ -5,6 +5,7 @@
  */
 package nolscorecalculator;
 
+import IofXml30.java.Event;
 import IofXml30.java.Id;
 import IofXml30.java.Organisation;
 import IofXml30.java.PersonResult;
@@ -191,25 +192,39 @@ public class Entity {
 
     }
      
-    public int updateTotalScore(int numberOfEvents){
+    public int updateTotalScore(int numberOfEvents) {
         // We might not always want best 9 results, after 5 races we might want
         // to post the cumulative results with best 3 races counting.
-        
+
         int numberOfRaces = getNumberOfRacesToCount(numberOfEvents);
-        
+
         // Sorts results by score and return the sum of the highest numberOfRaces.
         Collections.sort(this.results, (Result r1, Result r2) -> r2.getScore() - r1.getScore());
-        
+
         this.totalScore = 0;
-        for (int i=0; i<this.results.size(); i++){
-            if (i >= numberOfRaces) break;
-            
+        for (int i = 0; i < this.results.size(); i++) {
+            if (i >= numberOfRaces) {
+                break;
+            }
+
             this.totalScore += this.results.get(i).getScore();
         }
-        
+
         return this.totalScore;
     }
-    
+
+    public void setEventResultToFinalForSeason(Event event) {
+        // Update individual scores from that event if the athlete did that race
+
+        for (Result result : this.getResults()) {
+            if (result.getId().equals(event.getId())) {
+                // Recalculate Score
+                result.setIsFinalRaceOfSeason(true);
+                result.calculateScore();
+            }
+        }
+    }
+
     private int getNumberOfRacesToCount(int numberOfEvents){
         
         // Junior teams final total scores is best 50% or 50% plus one

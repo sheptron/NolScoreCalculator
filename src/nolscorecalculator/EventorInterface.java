@@ -89,9 +89,8 @@ public class EventorInterface {
         } catch (IOException io) {
             System.out.println("Catching IOException");            
             System.out.println(io.getMessage());
-            JFrame frame = new JFrame("Warning");
             String warning = "Trying to get data for \"" + description + "\" got this error: " + io.getMessage();
-            JOptionPane.showMessageDialog(frame, warning);
+            JOptionPane.showMessageDialog(null, warning);
         }
 
         return xmlString;
