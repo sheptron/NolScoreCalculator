@@ -27,14 +27,19 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFormattedTextField.AbstractFormatter;
+import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 import javax.xml.bind.JAXBException;
 import javax.xml.transform.TransformerException;
+import static nolscorecalculator.NolProgressBar.MY_MINIMUM;
 import nolscorecalculator.Result.TeamResultType;
 
 /**
@@ -47,7 +52,7 @@ public class NolScoreCalculator {
     // TODO handle classes being voided or cancelled
     // TODO user select date range
     
-    public static final boolean DEV = true;
+    public static final boolean DEV = false;
 
     public static final String CREATOR = "Sheptron Industries";
     public static final String EVENT_SELECTION_DIALOG_STRING = "Select all the NOL races from the list below...";
@@ -96,6 +101,19 @@ public class NolScoreCalculator {
 
     public static void main(String[] args)  {
         { //throws MalformedURLException, IOException, JAXBException, SAXException, ParserConfigurationException
+            
+            
+            ///
+            final NolProgressBar progressBar = new NolProgressBar();
+
+            JFrame frame = new JFrame("NOL Score Calculator Progress");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setContentPane(progressBar);
+            frame.pack();
+            frame.setVisible(true);
+            ///            
+
+
             // TODO get dates to/from from user       
             //DateSelector dateSelector = new DateSelector(); 
             //String startDate = dateSelector.getStartDate();
@@ -143,6 +161,7 @@ public class NolScoreCalculator {
             
             //JDatePicker jDatePicker = new JDatePicker();
 
+            progressBar.updateBar(0, "Downloading events list from Eventor\n");
             EventList eventList = EventorInterface.getEventList(fromDate, toDate);
             
             // Sort by putting events with names including "NOL" (etc) up the top (and MTBO at the bottom)
@@ -177,6 +196,8 @@ public class NolScoreCalculator {
 
             // Create a List of all the NOL Races                         
             ArrayList<Event> NOLSeasonEventList = new ArrayList<>();
+            
+            progressBar.updateBar(0, "Downloading Results for...\n");
 
             // Get Results For each selected event
             for (int i = 0; i < numberOfEvents; i++) {
@@ -185,6 +206,7 @@ public class NolScoreCalculator {
                 String eventIdString = event.getEventorId().getValue();
 
                 System.out.println(event.getName());
+                progressBar.updateBar((int)Math.round(100.0*(double)(i+1)/(double)numberOfEvents), event.getName() + "\n");
 
                 // Get this result list from Eventor (to do - get only the relevant classes!)
                 ResultList thisResultList;
@@ -448,6 +470,7 @@ public class NolScoreCalculator {
 
             /////////////////////////////////////
             // Now publish
+            progressBar.updateBar(100, "Writing NOL scores HTML file" + "\n");
             // XML -> (XSLT) -> HTML            
             // Build Result lists for each Category
             // TODO simplify this build (use a loop somehow?)            
@@ -496,7 +519,9 @@ public class NolScoreCalculator {
                     // Notify The User Something has Gone Wrong
                     JOptionPane.showMessageDialog(null, e.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);                    
                 }
-        }
+                
+            progressBar.updateBar(100, "Done..." + "\n");
+        }        
     }
     
     private static Event generateEventStage(Event mainEvent, ArrayList<String> eventRaceIds, int raceNumber, int numberOfRacesInThisEvent) {

@@ -198,14 +198,14 @@ public class Entity {
         // We might not always want best 9 results, after 5 races we might want
         // to post the cumulative results with best 3 races counting.
 
-        int numberOfRaces = calculateNumberOfRacesToCount(numberOfEvents);
+        this.numberOfRacesToCount = calculateNumberOfRacesToCount(numberOfEvents);
 
         // Sorts results by score and return the sum of the highest numberOfRaces.
         Collections.sort(this.results, (Result r1, Result r2) -> r2.getScore() - r1.getScore());
 
         this.totalScore = 0;
         for (int i = 0; i < this.results.size(); i++) {
-            if (i >= numberOfRaces) {
+            if (i >= this.numberOfRacesToCount) {
                 break;
             }
 
