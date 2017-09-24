@@ -29,8 +29,6 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Collections;
 import java.util.Map;
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.stream.StreamSource;
 
@@ -46,7 +44,7 @@ public class ResultsPrinter {
     public ResultsPrinter() {
     }
     
-    public void allResultsToNolXml(ArrayList<Entity>[] fullResultList, Map<Integer, Event> nolRaceNumberToId, String outputDirectory) throws JAXBException, IOException, FileNotFoundException, TransformerException {
+    public void allResultsToNolXml(ArrayList<Entity>[] fullResultList, Map<Integer, Event> nolRaceNumberToId, String outputDirectory, String thisYear) throws JAXBException, IOException, FileNotFoundException, TransformerException {
         
         // Produce the XML then use an XSL template to produce a HTML results file                
         
@@ -81,10 +79,15 @@ public class ResultsPrinter {
             if (classResultList.isEmpty()) continue;
                 
             ArrayList<NolPersonResult> personResults = new ArrayList<>();
+            int numberOfRacesToCount = 0;
             int place = 0;
             int previousAthletesTotalScore = 0;
             int previousAthletesPlace = 1;
             for (Entity athlete : classResultList) {
+                
+                if (place == 0) {// Only do this once - they should all be the same
+                    numberOfRacesToCount = athlete.getNumberOfRacesToCount();
+                } 
 
                 place++;
                 
@@ -116,7 +119,8 @@ public class ResultsPrinter {
                     
                     NolPersonRaceResult raceResult = factory.createNolPersonRaceResult();
                     raceResult.setScore(0);             // Add empty score for missed rounds/races
-                    raceResult.setRaceNumber(key);                    
+                    raceResult.setRaceNumber(key);     
+                    raceResult.setName(nolRaceNumberToId.get(key).getName());
 
                     // Does this race exist for this athlete?    
                     int indexOfResult = athlete.getResults().indexOf(new Result(nolRaceNumberToId.get(key).getId()));
@@ -140,19 +144,16 @@ public class ResultsPrinter {
             // Set up the Class (course) Result
             NolClassResult classResult = factory.createNolClassResult();          
             classResult.setNolClazz(classResultList.get(0).getNolCategory().toString());
+            classResult.setNumberOfRacesToCount(numberOfRacesToCount);
             classResult.setEventList(eventList);
-            classResult.setNolPersonResult(personResults);
-            
-            
-
+            classResult.setNolPersonResult(personResults);        
             classResults.add(classResult);
         }
 
         resultList.setNolClassResult(classResults);
         
-        String outFileName = "NOL_Results_After_Round_" + String.format("%d", nolRaceNumberToId.size());
+        String outFileName = thisYear + "_NOL_Results_After_Round_" + String.format("%d", nolRaceNumberToId.size());
         
-        File tempFile = new File(outputDirectory, outFileName + ".xml");
         File outFile = new File(outputDirectory, outFileName + ".html");
 
         JAXBContext jaxbContext = JAXBContext.newInstance("NolXml10");
@@ -161,8 +162,7 @@ public class ResultsPrinter {
         jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
 
         StringWriter xmlStringWriter = new StringWriter();       
-        jaxbMarshaller.marshal(resultList, xmlStringWriter);
-        //jaxbMarshaller.marshal(resultList, tempFile);
+        jaxbMarshaller.marshal(resultList, xmlStringWriter);        
 
         // Now convert to HTML
         try {
@@ -172,23 +172,11 @@ public class ResultsPrinter {
                     = tFactory.newTransformer(new javax.xml.transform.stream.StreamSource("src/nolscorecalculator/NolHtmlResults.xsl"));
             
             transformer.transform( new StreamSource(new StringReader(xmlStringWriter.toString())), 
-                    new javax.xml.transform.stream.StreamResult(new FileOutputStream(outFile)));
-
-            //transformer.transform(new javax.xml.transform.stream.StreamSource(tempFile),
-            //        new javax.xml.transform.stream.StreamResult(new FileOutputStream(outFile)));
-            
-        } catch (FileNotFoundException | TransformerException e) {
+                    new javax.xml.transform.stream.StreamResult(new FileOutputStream(outFile)));            
+        } 
+        catch (FileNotFoundException | TransformerException e) {
             throw e;
-        }
-        
-        // Delete the temporary XML file here - 
-        /*try {
-            tempFile.delete();
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }*/
-
+        }        
     }    
 
 }

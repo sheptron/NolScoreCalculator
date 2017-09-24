@@ -18,7 +18,7 @@
             </head>
             <body>
                 <xsl:for-each select="NolResultList/NolClassResult">
-                <xsl:value-of select="NolClass"/>
+                <xsl:value-of select="NolClass"/> (counting best <xsl:value-of select="NumberOfRacesToCount"/> races)
                 <style> table.nol-table, .nol-table th { border: 2px solid black; border-collapse: collapse; } </style>
                 <style> table.nol-table, .nol-table td { border: 1px solid black; border-collapse: collapse; } </style>
                 <table class="nol-table">
@@ -39,12 +39,12 @@
                     <td><xsl:value-of select="Team"/></td>
                     <td><xsl:value-of select="Total"/></td>    
                     <xsl:for-each select="Result">                    
-                        <td><xsl:value-of select="Score"/></td>
+                        <td><div title="{Name}"><xsl:value-of select="Score"/></div></td>
                     </xsl:for-each>                      
                     </tr>
                     </xsl:for-each>        
                 </table>
-                <br/>
+                <br/><br/>
                 </xsl:for-each>
             </body>
         </html>

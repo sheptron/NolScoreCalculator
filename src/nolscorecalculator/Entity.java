@@ -66,6 +66,8 @@ public class Entity {
     public static final int MAX_NUMBER_OF_RACES_TO_COUNT = 9;
     public static final int SENIORS_NUMBER_OF_RACES_TO_COUNT = 8;
     
+    public int numberOfRacesToCount = 1;
+    
     public boolean isTeam = false;
 
     Entity (PersonResult personResult, NolScoreCalculator.NolCategory _nolCategory) {
@@ -196,7 +198,7 @@ public class Entity {
         // We might not always want best 9 results, after 5 races we might want
         // to post the cumulative results with best 3 races counting.
 
-        int numberOfRaces = getNumberOfRacesToCount(numberOfEvents);
+        int numberOfRaces = calculateNumberOfRacesToCount(numberOfEvents);
 
         // Sorts results by score and return the sum of the highest numberOfRaces.
         Collections.sort(this.results, (Result r1, Result r2) -> r2.getScore() - r1.getScore());
@@ -225,7 +227,7 @@ public class Entity {
         }
     }
 
-    private int getNumberOfRacesToCount(int numberOfEvents){
+    private int calculateNumberOfRacesToCount(int numberOfEvents){
         
         // Junior teams final total scores is best 50% or 50% plus one
         // Senior teams count ALL races
@@ -236,28 +238,31 @@ public class Entity {
             }
         }
         
-        int numberOfRaceToCount;
+        //int numberOfRacesToCount;
         // Count an extra race early on in the season
         if (numberOfEvents < 8) {
-            numberOfRaceToCount = (int) Math.ceil((double) numberOfEvents / 2.0) + 1;
+            this.numberOfRacesToCount = (int) Math.ceil((double) numberOfEvents / 2.0) + 1;
         } 
         else {
             
             if (this.nolCategory==NolScoreCalculator.NolCategory.SeniorMen || this.nolCategory==NolScoreCalculator.NolCategory.SeniorWomen){
                 return SENIORS_NUMBER_OF_RACES_TO_COUNT;                    
             }
-            
-            // TODO this is a hack - we need to sort out how to achieve this properly
-            numberOfRaceToCount = 8; //(int) Math.ceil((double) numberOfEvents / 2.0);
+            else { // Juniors
+                // TODO this is a hack - we need to sort out how to achieve this properly                
+                this.numberOfRacesToCount = 8; //(int) Math.ceil((double) numberOfEvents / 2.0);
+            }
         }                
         
-        if (numberOfRaceToCount > MAX_NUMBER_OF_RACES_TO_COUNT) {
-            numberOfRaceToCount = MAX_NUMBER_OF_RACES_TO_COUNT;
+        // Cap the number of counting races
+        if (this.numberOfRacesToCount > MAX_NUMBER_OF_RACES_TO_COUNT) {
+            this.numberOfRacesToCount = MAX_NUMBER_OF_RACES_TO_COUNT;
         }        
         
-        if (numberOfRaceToCount > numberOfEvents) return numberOfEvents;
+        // Make sure we haven't made a stuff-up and tried to count more races than we've done
+        if (this.numberOfRacesToCount > numberOfEvents) this.numberOfRacesToCount = numberOfEvents;
         
-        return numberOfRaceToCount;
+        return this.numberOfRacesToCount;
     }
 
     public String getName() {
@@ -286,6 +291,10 @@ public class Entity {
 
     public void setResults(ArrayList<Result> results) {
         this.results = results;
+    }
+
+    public int getNumberOfRacesToCount() {
+        return numberOfRacesToCount;
     }
 
     @Override

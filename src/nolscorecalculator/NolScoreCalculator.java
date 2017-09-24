@@ -44,10 +44,7 @@ import nolscorecalculator.Result.TeamResultType;
  */
 public class NolScoreCalculator {
 
-    // TODO Juniors included in Senior results for Sprint Races (just dodgy this up)  
-    // TODO mouse over race name on all scores
-    // TODO add number of races counting to html output
-    // TODO filename: add YEAR    
+    // TODO Juniors included in Senior results for Sprint Races (just dodgy this up)        
     // TODO handle classes being voided or cancelled
     // TODO user select date range
     // TODO kill dialog threads when necessary
@@ -85,21 +82,18 @@ public class NolScoreCalculator {
         Arrows, Cockatoos, Cyclones, Foresters, Nomads, Nuggets, Stingers
     };
 
-    // Map of Eventor ID to Team Names - hard coded, maybe not a good idea? Can we determine NOL teams from Eventor download only?
+    // Map of Eventor ID to Team Names - hard coded, maybe not a good idea? 
+    // TODO Can we determine NOL teams from Eventor download only?
     public static Map<String, String> nolOrganisations = createNolOrganisationsMap();
 
     public static ArrayList<Entity>[] NOLSeasonTeams = createNolSeasonTeams();
 
-    //private static final String[] SENIOR_CLASSES_MW = {"21"};
-    //private static final String[] JUNIOR_CLASSES_MW = {"18", "20"};
+    // Comprehensive list of all possible age categories we're going to count in the NOL
     private static final String[] VALID_ELITE_CLASSES = {"M21E", "Men 21 Elite", "W21E", "Women 21 Elite"};
     private static final String[] VALID_JUNIOR_ELITE_CLASSES = {"M17-20E", "M-20E", "Men 20 Elite", "M20E", "W17-20E", "W-20E", "W20E", "Women 20 Elite"};
     private static final String[] VALID_NONELITE_CLASSES = {"M21A", "W21A"};
     private static final String[] VALID_JUNIOR_NONELITE_CLASSES = {"M20A", "W20A", "M18A", "W18A"};
 
-    /**
-     * @param args the command line arguments
-     */
     public static void main(String[] args)  {
         { //throws MalformedURLException, IOException, JAXBException, SAXException, ParserConfigurationException
             // TODO get dates to/from from user       
@@ -141,6 +135,8 @@ public class NolScoreCalculator {
             // END Testing
             String fromDate = "2017-03-01";//"2017-03-01";
             String toDate = "2017-10-31"; //2017-10-31";
+            
+            String thisYear = fromDate.substring(0, 4);
             
             // The last (individual) race of the season scores (3) extra points            
             Event lastIndividualEvent = new Event();
@@ -402,7 +398,7 @@ public class NolScoreCalculator {
             // Calculate Total Individual Scores            
             for (Entity nolAthlete : NOLSeasonResults) {
              
-                // First update score from final race of season
+                // First update score from final race of season (extra points)
                 if (lastIndividualRaceOfSeason) {                    
                         nolAthlete.setEventResultToFinalForSeason(lastIndividualEvent);
                 }
@@ -487,7 +483,7 @@ public class NolScoreCalculator {
 
                 // // TODO out of bounds exception here when empty
                 try { 
-                resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToEvent, outputDirectory);          
+                resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToEvent, outputDirectory, thisYear);          
                 }
                 catch(JAXBException | IOException | TransformerException e){
                     // Notify The User Something has Gone Wrong

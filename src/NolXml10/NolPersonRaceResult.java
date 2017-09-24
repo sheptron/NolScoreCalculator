@@ -29,7 +29,8 @@ import javax.xml.datatype.XMLGregorianCalendar;
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "NolPersonRaceResult", propOrder = {    
     "score",
-    "raceNumber"
+    "raceNumber",
+    "name"    
 })
 public class NolPersonRaceResult {
 
@@ -54,6 +55,15 @@ public class NolPersonRaceResult {
         this.raceNumber = raceNumber;
     }
 
-    
+    @XmlElement(name = "Name")
+    protected String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
 }
