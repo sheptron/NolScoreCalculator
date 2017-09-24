@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.JFileChooser;
 import javax.swing.JFormattedTextField.AbstractFormatter;
-import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
@@ -47,7 +46,6 @@ public class NolScoreCalculator {
     // TODO Juniors included in Senior results for Sprint Races (just dodgy this up)        
     // TODO handle classes being voided or cancelled
     // TODO user select date range
-    // TODO kill dialog threads when necessary
     
     public static final boolean DEV = true;
 
@@ -85,6 +83,8 @@ public class NolScoreCalculator {
     // Map of Eventor ID to Team Names - hard coded, maybe not a good idea? 
     // TODO Can we determine NOL teams from Eventor download only?
     public static Map<String, String> nolOrganisations = createNolOrganisationsMap();
+    
+    public static Map<String, Integer> nolTeamResultsIndexes = new HashMap<>();
 
     public static ArrayList<Entity>[] NOLSeasonTeams = createNolSeasonTeams();
 
@@ -144,11 +144,11 @@ public class NolScoreCalculator {
             //JDatePicker jDatePicker = new JDatePicker();
 
             EventList eventList = EventorInterface.getEventList(fromDate, toDate);
-
-            // TODO Sort by putting events with names including "NOL" up the top
+            
+            // Sort by putting events with names including "NOL" (etc) up the top (and MTBO at the bottom)
+            Collections.sort(eventList.getEvent(), new NolEventCompare());
+           
             // Now sort which event we want (we want to get their EventId so we can download the results)
-            // Give user a selection box
-            // Build up a list
             int[] indexOfSelectedEvents;
             int numberOfDownloadedEvents = eventList.getEvent().size();
             String eventsInDateRange[] = new String[numberOfDownloadedEvents];
@@ -169,16 +169,13 @@ public class NolScoreCalculator {
 
             indexOfSelectedEvents = list.getSelectedIndices();
             
-            // TODO make sure these are in date order (they usually are coming from Eventor)
-            
             int numberOfEvents = indexOfSelectedEvents.length;
             int numberOfRaces = 0;    // Thise is for where an event has multiple races                       
             
             // Create a List of NOL Athletes to store all our results in
             ArrayList<Entity> NOLSeasonResults = new ArrayList<>();
 
-            // Create a List of all the NOL Races             
-            //ArrayList<String> NOLSeasonEventString = new ArrayList<>();
+            // Create a List of all the NOL Races                         
             ArrayList<Event> NOLSeasonEventList = new ArrayList<>();
 
             // Get Results For each selected event
@@ -195,18 +192,17 @@ public class NolScoreCalculator {
                 try {
                     thisResultList = EventorInterface.downloadResultList(eventList, indexOfSelectedEvents[i]);
                     eventRaceIds = EventorInterface.downloadListOfEventRaceIds(eventIdString);
-                    //thisResultList = EventorInterface.downloadResultListForEventRaceId(eventIdString, eventRaceId);
                 } catch (Exception e) {
                     // Somethings gone wrong, nothing we can do! We've already given the user a warning...
                     // TODO - try again in a little while?? shuffle this one back into the list??
                     continue;
                 }            
                 
-                // TODO RELAYS
+                // RELAYS
                 boolean isRelay = thisResultList.getEvent().getForm().get(0).equals(EventForm.RELAY);                
               
                 // Trim the Result List (get rid of non-NOL classes) - just to make things a bit quicker
-                ArrayList<ClassResultExtended> resultList = trimResultList(thisResultList);
+                ArrayList<ClassResultExtended> resultList = trimResultList(thisResultList, isRelay);
                 // TODO trimResults needs to remove B finals for juniors
 
                 // There may be more than one race
@@ -216,19 +212,21 @@ public class NolScoreCalculator {
                     
                     numberOfRaces += 1;
                     
-                    Id eventId = new Id(); //thisResultList.getEvent().getId();                    
+                    Event thisEvent = generateEventStage(thisResultList.getEvent(), eventRaceIds, raceNumber, numberOfRacesInThisEvent);
+                    /*
+                    Id eventId = new Id();                    
                     eventId.setValue(eventRaceIds.get(raceNumber-1));
                     eventId.setType(thisResultList.getEvent().getId().getType());
-                    
-                    // TODO Make a "Replicate Event" method
+                                     
                     Event mainEvent = thisResultList.getEvent();
                     Event thisEvent = new Event();
                     if (numberOfRacesInThisEvent > 1) thisEvent.setName(mainEvent.getName() + " Race " + raceNumber);
                     else thisEvent.setName(mainEvent.getName());
                     if (!mainEvent.getForm().isEmpty()) thisEvent.setForm(mainEvent.getForm());                    
                     thisEvent.setStartTime(mainEvent.getRace().get(raceNumber-1).getStartTime());
-                    thisEvent.setId(eventId);
-                    //
+                    thisEvent.setId(eventId);                    
+                    */
+                    Id eventId = thisEvent.getId();
                     
                     NOLSeasonEventList.add(thisEvent);                                                          
                     
@@ -249,15 +247,7 @@ public class NolScoreCalculator {
 
                         if (isRelay) {
 
-                            int numberOfLegs = classResult.getClazz().getMinNumberOfTeamMembers().intValue();
-                            // TODO could make this cleaner - but we need nolTeamResults to be the right type, 
-                            // TODO createEmptyNolTeamResults constructor should set isRelay, OR do we need isRelay? can we just use TeamResultType?
-                            nolTeamResults = createEmptyNolTeamResults(nolCategory, eventId, TeamResultType.Relay);                                                                                   
-                            
-                            /*
-                            in thisResultList
-                            event -> form[0] = "RELAY"                            
-                             */
+                            int numberOfLegs = classResult.getClazz().getMinNumberOfTeamMembers().intValue();                                                                                                          
                             
                             for (TeamResult teamResult : classResult.getTeamResult()) {
                                 
@@ -271,17 +261,23 @@ public class NolScoreCalculator {
                                     // END DEV ONLY
                                 }
                                 
+                                // NOL Team 
+                                if (teamResult.getOrganisation() == null || teamResult.getOrganisation().get(0).getId() == null 
+                                        || nolTeamResultsIndexes.get(teamResult.getOrganisation().get(0).getId().getValue()) == null) {
+                                    // This team isn't a NOL team
+                                    continue;
+                                }
+                                
                                 // Find the right team result and add this teamResult to it (if a team result already exists it will only replace it if the time is faster)
-                                // TODO speedup : keep an index to lookup rather than loop through
-                                for (Result res : nolTeamResults) {
+                                int index = nolTeamResultsIndexes.get(teamResult.getOrganisation().get(0).getId().getValue());
+                                nolTeamResults.get(index).addRelayResult(teamResult, numberOfLegs);                                
+                                /*for (Result res : nolTeamResults) {
                                     // Check Organisation Id Value                                
                                     if (res.getOrganisation().getId().getValue().equals(teamResult.getOrganisation().get(0).getId().getValue())) {
-
-                                        res.isRelay = true;
                                         res.addRelayResult(teamResult, numberOfLegs);
                                         break;   // No need to keep looking in nolTeamResults
                                     }
-                                }
+                                }*/
                             }
                             
                         } 
@@ -318,14 +314,26 @@ public class NolScoreCalculator {
                                 }
 
                                 // Team 
-                                if (personResult.getOrganisation() == null || personResult.getOrganisation().getId() == null) {
-                                    // This person isn't in a team
+                                if (personResult.getOrganisation() == null || personResult.getOrganisation().getId() == null 
+                                        || nolTeamResultsIndexes.get(personResult.getOrganisation().getId().getValue()) == null) {
+                                    // This person isn't in a NOL team
                                     continue;
                                 }
 
-                                // Find the right team result and add this personResult to it
-                                // TODO speedup : keep an index to lookup rather than loop through
-                                for (Result res : nolTeamResults) {
+                                // Find the right team result and add this personResult to it                                
+                                int index = nolTeamResultsIndexes.get(personResult.getOrganisation().getId().getValue());
+                                switch (teamResultType) {
+                                    case RaceTimes:
+                                        nolTeamResults.get(index).addIndividualResult(personResult); // Add result
+                                        break;
+                                    case Placings:
+                                        nolTeamResults.get(index).addIndividualResult(personResult, teamResultType);
+                                        break;
+                                    case NolScores:
+                                        nolTeamResults.get(index).addIndividualResult(nolResult);                                        
+                                }
+                                
+                                /*for (Result res : nolTeamResults) {
                                     // Check Organisation Id Value                                
                                     if (res.getOrganisation().getId().getValue().equals(personResult.getOrganisation().getId().getValue())) {
 
@@ -341,13 +349,12 @@ public class NolScoreCalculator {
                                         }
                                         break;   // No need to keep looking in nolTeamResults
                                     }
-                                }
+                                }*/
                             }
                         }
 
                         // This class is finished so now assign team points
-                        // Sort this last lot of results
-                        // TODO Relays - need to set isRelay boolean in team result!                         
+                        // Sort this last lot of results                                               
                         switch (teamResultType) {
                             case NolScores:
                                 Collections.sort(nolTeamResults, new NolTeamResultAandBfinalsCompare());
@@ -481,17 +488,40 @@ public class NolScoreCalculator {
 
             ResultsPrinter resultsPrinter = new ResultsPrinter();
 
-                // // TODO out of bounds exception here when empty
+                // TODO out of bounds exception here when empty
                 try { 
-                resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToEvent, outputDirectory, thisYear);          
+                    resultsPrinter.allResultsToNolXml(resultsForPrinting, nolRaceNumberToEvent, outputDirectory, thisYear);          
                 }
                 catch(JAXBException | IOException | TransformerException e){
                     // Notify The User Something has Gone Wrong
-                    //JFrame frame = new JFrame("Warning");
-                    JOptionPane.showMessageDialog(new JFrame(), e.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
-                    System.exit(0);
+                    JOptionPane.showMessageDialog(null, e.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);                    
                 }
         }
+    }
+    
+    private static Event generateEventStage(Event mainEvent, ArrayList<String> eventRaceIds, int raceNumber, int numberOfRacesInThisEvent) {
+        // When we have multiple events (multiday race) use this method to split the 
+        // datas from Eventor into separate events
+        
+        Id eventId = new Id();
+        eventId.setValue(eventRaceIds.get(raceNumber - 1));
+        eventId.setType(mainEvent.getId().getType());
+
+        //Event mainEvent = thisResultList.getEvent();
+        Event newEvent = new Event();
+        if (numberOfRacesInThisEvent > 1) {
+            newEvent.setName(mainEvent.getName() + " Race " + raceNumber);
+        } else {
+            newEvent.setName(mainEvent.getName());
+        }
+        if (!mainEvent.getForm().isEmpty()) {
+            newEvent.setForm(mainEvent.getForm());
+        }
+        newEvent.setStartTime(mainEvent.getRace().get(raceNumber - 1).getStartTime());
+        newEvent.setId(eventId);
+        //
+        
+        return newEvent;
     }
     
     private static boolean promptUserConfirmLastRaceOfSeason(Event lastIndividualEvent) {
@@ -504,6 +534,7 @@ public class NolScoreCalculator {
         else return false;
     }
 
+    /*
     private static String getFileExtension(File file) {
         String fileName = file.getName();
         if (fileName.lastIndexOf(".") != -1 && fileName.lastIndexOf(".") != 0) {
@@ -512,7 +543,9 @@ public class NolScoreCalculator {
             return "";
         }
     }
+    */
 
+    /*
     private static boolean isUsingEliteClasses(ResultList resultList) {
 
         boolean usingEliteClasses = false;
@@ -527,6 +560,7 @@ public class NolScoreCalculator {
 
         return usingEliteClasses;
     }
+    */
 
     private static List<ClassResultExtended> getClassesForAgeCategory(ResultList resultList, NolAgeCategory nolAgeCategory) {
 
@@ -561,7 +595,7 @@ public class NolScoreCalculator {
                 for (ClassResultExtended classResult : classResults) {
                     classResult.setTeamResultType(TeamResultType.Placings);
                 }
-            }
+            }            
 
             return classResults;
         }
@@ -710,16 +744,13 @@ public class NolScoreCalculator {
         return (usingEAclasses && usingEBclasses);
     }
 
-    private static ArrayList<ClassResultExtended> trimResultList(ResultList resultList) {
+    private static ArrayList<ClassResultExtended> trimResultList(ResultList resultList, boolean isRelay) {
 
         /* 
-        
         This is an important method, here we'll trim off any non-NOL classes
         and make some decisions (what NOL category, how t0 calculate team 
         scores etc)
-
          */
-        // TODO check for relays
         // TODO We need to treat junior and senior classes differently: we may have the case
         // where we have M/W21E and M/W20A + M/W18A.
         // First go through and decide which classes to keep
@@ -732,6 +763,13 @@ public class NolScoreCalculator {
         ArrayList<ClassResultExtended> validClassList = new ArrayList<>();
         validClassList.addAll(seniorClassList);
         validClassList.addAll(juniorClassList);
+        
+        // Override the Team Result Type if this is a relay
+        if (isRelay) {
+            for (ClassResultExtended classResult : validClassList) {
+                classResult.setTeamResultType(TeamResultType.Relay);
+            }
+        }
 
         return validClassList;
 
@@ -817,6 +855,7 @@ public class NolScoreCalculator {
         return classResultList;
     }
 
+    /*
     private static boolean isValidClass(String className, boolean usingEliteClasses) {
 
         boolean validClass = false;
@@ -835,7 +874,7 @@ public class NolScoreCalculator {
             }
         }
         return validClass;
-    }
+    }*/
 
     private static NolCategory getNolCategory(String className) {
         // Decide what NOL Category this result was in
@@ -951,6 +990,10 @@ public class NolScoreCalculator {
     private static ArrayList<Result> createEmptyNolTeamResults(NolCategory nolCategory, Id eventId, TeamResultType teamResultType) {
 
         ArrayList<Result> nolTeamResults = new ArrayList<>();
+        
+        nolTeamResultsIndexes.clear();
+        
+        int index = 0;
 
         for (Map.Entry pair : nolOrganisations.entrySet()) {
 
@@ -965,9 +1008,34 @@ public class NolScoreCalculator {
             Result result = new Result(eventId, organisation, nolCategory, teamResultType);
 
             nolTeamResults.add(result);
+            
+            nolTeamResultsIndexes.put(id.getValue(), index);
+            index++;
         }
 
         return nolTeamResults;
+    }
+    
+    private static Map<Id, Result> createEmptyNolTeamResultsMap(NolCategory nolCategory, Id eventId, TeamResultType teamResultType) {
+        
+        Map<Id, Result> nolTeamResultsMap = new HashMap<>();
+        
+        for (Map.Entry pair : nolOrganisations.entrySet()) {
+
+            // Create an empty Result for each team (organisation)
+            Id id = new Id();
+            id.setValue((String) pair.getKey());
+            Organisation organisation = new Organisation();
+            organisation.setId(id);
+            organisation.setName((String) pair.getValue());
+            boolean isTeamResult = true; // TODO need this in Result constructor
+
+            Result result = new Result(eventId, organisation, nolCategory, teamResultType);
+
+            nolTeamResultsMap.put(id, result);
+        }
+
+        return nolTeamResultsMap;
     }
 
     private static Organisation testingOnlyTranslateOrganisationId(Organisation organisation, TeamResult teamResult) {

@@ -53,15 +53,15 @@ public final class Result {
     public ArrayList<String> athleteNames;      // Names corresponding to the times in raceTimes            
     public int numberOfIndividualResults = 0;
     public int bestIndividualPlacing = Integer.MAX_VALUE;
-    public boolean isRelay = false;
+    //public boolean isRelay = false;
 
-    public boolean isIsRelay() {
-        return isRelay;
-    }
+    //public boolean isIsRelay() {
+    //    return isRelay;
+    //}
 
-    public void setIsRelay(boolean isRelay) {
-        this.isRelay = isRelay;
-    }   
+    //public void setIsRelay(boolean isRelay) {
+    //    this.isRelay = isRelay;
+    //}   
 
     public Result(Id id) {
         this.id = id;  
@@ -255,7 +255,7 @@ public final class Result {
             this.score = scores[this.placing-1];
         }
 
-        if (this.isRelay) this.score = 2*this.score;
+        if (this.teamResultType == TeamResultType.Relay) this.score = 2*this.score;
         
         // Teams with no finishers score 0 points
         if (this.isTeamResult){
