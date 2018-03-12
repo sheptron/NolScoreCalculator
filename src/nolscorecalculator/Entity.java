@@ -11,6 +11,7 @@ import IofXml30.java.Organisation;
 import IofXml30.java.PersonResult;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -119,6 +120,11 @@ public class Entity {
     
     private void standardiseOrganisationNames(){
         
+        //Map<String, String> nolOrganisations
+        this.organisation.setName(NolScoreCalculator.nolOrganisations.getOrDefault(this.organisation.getId().getValue(),""));
+        this.organisation.setShortName(NolScoreCalculator.nolOrganisationLongShortNamesMap().getOrDefault(this.organisation.getName(), ""));
+        
+        /*
         String thisOrganisationsName = this.organisation.getName();
         if (thisOrganisationsName.length()<5){
             String tryThis = NolScoreCalculator.nolOrganisationShortLongNamesMap().get(thisOrganisationsName);
@@ -134,6 +140,7 @@ public class Entity {
                 this.organisation.setShortName(tryThis);
             }
         }
+        */
     }   
     
     private void setEmptyOrganisation(){
@@ -318,16 +325,23 @@ public class Entity {
         }
         final Entity other = (Entity) obj;
         if (!this.id.getValue().equals(other.id.getValue())) {
-            //return false;
+            if (NolScoreCalculator.USE_STRICT_COMPETITOR_MATCHING) return false;
 
             /* Normally we'd return false here but check names and NOL
             teams match in case we have results with Eventor IDs missing */
-            // TODO team names are CC A in OCeania and Canberra Cockatoos in other races... fix this!
-            if (!this.getName().equals(other.getName())){         
-            //if (!this.getName().equals(other.getName()) || !this.getTeamName().equals(other.getTeamName())){         
-                return false;
+            // TODO team names are CC A in OCeania and Canberra Cockatoos in other races... fix this!         
+            // USe this when we don't need the Rob Bennett fix         
+            if (!this.getName().equals(other.getName())) {
+
+                // Dodgy bit for Rob Bennett Fix
+                if (! (this.surname.equals("Bennett") && other.surname.equals("Bennett"))) {
+                    return false;
+                }
+                // End of Rob Bennett fix
+                // Remove fix and uncomment line below to return to normal
+                //return false;
             }
-            
+
         }
         if (this.nolCategory != other.nolCategory) {
             return false;

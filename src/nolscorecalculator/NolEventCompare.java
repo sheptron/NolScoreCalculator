@@ -5,8 +5,8 @@
  */
 package nolscorecalculator;
 
-import IofXml30.java.DateAndOptionalTime;
-import IofXml30.java.Event;
+
+import EventorApi.Event;
 import java.util.Comparator;
 
 /**
@@ -24,9 +24,9 @@ public class NolEventCompare implements Comparator<Event> {
     public int compare(Event e1, Event e2) {
         
         // Get rid of MTBO
-        boolean event1isMtbo = e1.getName().toLowerCase().contains("mtb");
+        boolean event1isMtbo = e1.getName().getContent().toLowerCase().contains("mtb");
         
-        boolean event2isMtbo = e2.getName().toLowerCase().contains("mtb");
+        boolean event2isMtbo = e2.getName().getContent().toLowerCase().contains("mtb");
         
         if (event1isMtbo && !event2isMtbo){
             return 1;
@@ -36,9 +36,9 @@ public class NolEventCompare implements Comparator<Event> {
         }
         
         // Now look for NOL or National League
-        boolean event1isNol = e1.getName().toLowerCase().contains("nol") || e1.getName().toLowerCase().contains("national league");
+        boolean event1isNol = e1.getName().getContent().toLowerCase().contains("nol") || e1.getName().getContent().toLowerCase().contains("national league");
         
-        boolean event2isNol = e2.getName().toLowerCase().contains("nol") || e2.getName().toLowerCase().contains("national league");
+        boolean event2isNol = e2.getName().getContent().toLowerCase().contains("nol") || e2.getName().getContent().toLowerCase().contains("national league");
         
         if (event1isNol && !event2isNol){
             return -1;
@@ -48,9 +48,9 @@ public class NolEventCompare implements Comparator<Event> {
         }
         
         // Now look for National Championships
-        boolean event1isNatChampionship = e1.getName().toLowerCase().contains("australian") && e1.getName().toLowerCase().contains("championship");
+        boolean event1isNatChampionship = e1.getName().getContent().toLowerCase().contains("australian") && e1.getName().getContent().toLowerCase().contains("championship");
         
-        boolean event2isNatChampionship = e2.getName().toLowerCase().contains("australian") && e2.getName().toLowerCase().contains("championship");
+        boolean event2isNatChampionship = e2.getName().getContent().toLowerCase().contains("australian") && e2.getName().getContent().toLowerCase().contains("championship");
         
         if (event1isNatChampionship && !event2isNatChampionship){
             return -1;
@@ -60,9 +60,9 @@ public class NolEventCompare implements Comparator<Event> {
         }
         
         // Now look for any other championships
-        boolean event1isChampionship = e1.getName().toLowerCase().contains("championship");
+        boolean event1isChampionship = e1.getName().getContent().toLowerCase().contains("championship");
         
-        boolean event2isChampionship = e2.getName().toLowerCase().contains("championship");
+        boolean event2isChampionship = e2.getName().getContent().toLowerCase().contains("championship");
         
         if (event1isChampionship && !event2isChampionship){
             return -1;

@@ -209,8 +209,25 @@ public final class Result {
         }                             
     }
     
+    public static int getNumberOfRelayLegs(ClassResultExtended classResult){
+        
+        int numberOfLegs = 0;
+        
+        for (TeamResult teamResult : classResult.getTeamResult()) {
+            int numberOfLegsInThisTeam = teamResult.getTeamMemberResult().size();
+            
+            if (numberOfLegsInThisTeam > numberOfLegs){
+                numberOfLegs = numberOfLegsInThisTeam; 
+            }
+        }
+        
+        return numberOfLegs;
+    }
+    
     public void addRelayResult(TeamResult teamResult, int numberOfLegs){               
                
+        
+        
         // Don't add DNFs and DSQs
         for (TeamMemberResult teamMemberResult : teamResult.getTeamMemberResult()) {
                        

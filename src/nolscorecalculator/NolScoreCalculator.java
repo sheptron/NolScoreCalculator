@@ -8,7 +8,6 @@ package nolscorecalculator;
 import IofXml30.java.ClassResult;
 import IofXml30.java.Event;
 import IofXml30.java.EventForm;
-import IofXml30.java.EventList;
 import IofXml30.java.Id;
 import IofXml30.java.Organisation;
 import IofXml30.java.PersonResult;
@@ -27,8 +26,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import javax.swing.JComponent;
-import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFormattedTextField.AbstractFormatter;
 import javax.swing.JFrame;
@@ -36,10 +33,8 @@ import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
 import javax.xml.bind.JAXBException;
 import javax.xml.transform.TransformerException;
-import static nolscorecalculator.NolProgressBar.MY_MINIMUM;
 import nolscorecalculator.Result.TeamResultType;
 
 /**
@@ -51,14 +46,17 @@ public class NolScoreCalculator {
     // TODO Juniors included in Senior results for Sprint Races (just dodgy this up)        
     // TODO handle classes being voided or cancelled
     // TODO user select date range
+    // TODO Individual point scores don't display club if not NOL team
     
     public static final boolean DEV = false;
+    
+    public static boolean USE_STRICT_COMPETITOR_MATCHING = true;   // Use Eventor ID to match athletes
 
     public static final String CREATOR = "Sheptron Industries";
     public static final String EVENT_SELECTION_DIALOG_STRING = "Select all the NOL races from the list below...";
 
     public enum NolCategory {
-        SeniorMen, SeniorWomen, JuniorMen, JuniorWomen;
+        SeniorMen, SeniorWomen, JuniorMen, JuniorWomen, SeniorMixed, JuniorMixed;
 
         @Override
         public String toString() {
@@ -71,6 +69,10 @@ public class NolScoreCalculator {
                     return "Junior Men";
                 case JuniorWomen:
                     return "Junior Women";
+                case SeniorMixed:
+                    return "Senior Mixed";
+                case JuniorMixed:
+                    return "Junior Mixed";
                 default:
                     throw new IllegalArgumentException();
             }
@@ -80,6 +82,8 @@ public class NolScoreCalculator {
     public enum NolAgeCategory {
         Senior, Junior;
     }
+    
+    public static final int NUMBER_MIXED_CATEGORIES = 2;
 
     public enum NolTeamName {
         Arrows, Cockatoos, Cyclones, Foresters, Nomads, Nuggets, Stingers
@@ -94,8 +98,9 @@ public class NolScoreCalculator {
     public static ArrayList<Entity>[] NOLSeasonTeams = createNolSeasonTeams();
 
     // Comprehensive list of all possible age categories we're going to count in the NOL
-    private static final String[] VALID_ELITE_CLASSES = {"M21E", "Men 21 Elite", "W21E", "Women 21 Elite"};
-    private static final String[] VALID_JUNIOR_ELITE_CLASSES = {"M17-20E", "M-20E", "Men 20 Elite", "M20E", "W17-20E", "W-20E", "W20E", "Women 20 Elite"};
+    private static final String[] VALID_ELITE_CLASSES = {"M21E", "Men 21 Elite", "Men 21E",  "W21E", "Women 21 Elite", "Women 21E", "Mixed Elite Relay"};
+    private static final String[] VALID_JUNIOR_ELITE_CLASSES = {"M17-20E", "M-20E", "Men 20 Elite", "Men 20E", "M20E", "W17-20E", "W-20E", "W20E", "Women 20 Elite", "Women 20E", "Mixed Junior Elite Relay"};
+    // TODO can we try and work out which are the elite classes? Seems event organisers keep finding a different way to same the same thing... 
     private static final String[] VALID_NONELITE_CLASSES = {"M21A", "W21A"};
     private static final String[] VALID_JUNIOR_NONELITE_CLASSES = {"M20A", "W20A", "M18A", "W18A"};
 
@@ -111,9 +116,8 @@ public class NolScoreCalculator {
             frame.setContentPane(progressBar);
             frame.pack();
             frame.setVisible(true);
-            ///            
-
-
+            ///       
+            
             // TODO get dates to/from from user       
             //DateSelector dateSelector = new DateSelector(); 
             //String startDate = dateSelector.getStartDate();
@@ -151,8 +155,10 @@ public class NolScoreCalculator {
                 s = JOptionPane.showOptionDialog(null, new JScrollPane(jlist), "Title", JOptionPane.YES_NO_CANCEL_OPTION,JOptionPane.QUESTION_MESSAGE,null,options,options[0]);
             }*/
             // END Testing
-            String fromDate = "2017-03-01";//"2017-03-01";
-            String toDate = "2017-10-31"; //2017-10-31";
+            
+            // TODO get date from user
+            String fromDate = "2018-03-01";//"2017-03-01";
+            String toDate = "2018-03-31"; //2017-10-31";
             
             String thisYear = fromDate.substring(0, 4);
             
@@ -162,7 +168,7 @@ public class NolScoreCalculator {
             //JDatePicker jDatePicker = new JDatePicker();
 
             progressBar.updateBar(0, "Downloading events list from Eventor\n");
-            EventList eventList = EventorInterface.getEventList(fromDate, toDate);
+            EventorApi.EventList eventList = EventorInterface.getEventList(fromDate, toDate);
             
             // Sort by putting events with names including "NOL" (etc) up the top (and MTBO at the bottom)
             Collections.sort(eventList.getEvent(), new NolEventCompare());
@@ -172,7 +178,7 @@ public class NolScoreCalculator {
             int numberOfDownloadedEvents = eventList.getEvent().size();
             String eventsInDateRange[] = new String[numberOfDownloadedEvents];
             for (int i = 0; i < numberOfDownloadedEvents; i++) {
-                eventsInDateRange[i] = eventList.getEvent().get(i).getName();
+                eventsInDateRange[i] = eventList.getEvent().get(i).getName().getContent();
             }
 
             JList list = new JList(eventsInDateRange);
@@ -202,11 +208,11 @@ public class NolScoreCalculator {
             // Get Results For each selected event
             for (int i = 0; i < numberOfEvents; i++) {
 
-                Event event = eventList.getEvent().get(indexOfSelectedEvents[i]);
-                String eventIdString = event.getEventorId().getValue();
+                EventorApi.Event event = eventList.getEvent().get(indexOfSelectedEvents[i]);
+                String eventIdString = event.getEventId().getContent(); //.getEventorId().getValue();
 
-                System.out.println(event.getName());
-                progressBar.updateBar((int)Math.round(100.0*(double)(i+1)/(double)numberOfEvents), event.getName() + "\n");
+                System.out.println(event.getName().getContent());
+                progressBar.updateBar((int)Math.round(100.0*(double)(i+1)/(double)numberOfEvents), event.getName().getContent() + "\n");
 
                 // Get this result list from Eventor (to do - get only the relevant classes!)
                 ResultList thisResultList;
@@ -221,11 +227,13 @@ public class NolScoreCalculator {
                 }            
                 
                 // RELAYS
-                boolean isRelay = thisResultList.getEvent().getForm().get(0).equals(EventForm.RELAY);                
-              
+                boolean isRelay = thisResultList.getEvent().getForm().get(0).equals(EventForm.RELAY); 
+                boolean isMixedRelay = false;
+                              
                 // Trim the Result List (get rid of non-NOL classes) - just to make things a bit quicker
                 ArrayList<ClassResultExtended> resultList = trimResultList(thisResultList, isRelay);
                 // TODO trimResults needs to remove B finals for juniors
+                if (isRelay) isMixedRelay = getIsMixedRelay(resultList);
 
                 // There may be more than one race
                 int numberOfRacesInThisEvent = thisResultList.getEvent().getRace().size();
@@ -269,11 +277,19 @@ public class NolScoreCalculator {
 
                         if (isRelay) {
 
-                            int numberOfLegs = classResult.getClazz().getMinNumberOfTeamMembers().intValue();                                                                                                          
+                            // Organisers don't always use this field so try it but we have a backup option...
+                            int numberOfLegs = classResult.getClazz().getMinNumberOfTeamMembers().intValue();
+                            if (numberOfLegs < 2){ // Guess that means the above failed
+                                numberOfLegs = Result.getNumberOfRelayLegs(classResult);
+                            }
                             
                             for (TeamResult teamResult : classResult.getTeamResult()) {
                                 
-                                if (DEV) {
+                                if (false) {
+                                    /* 
+                                    TODO organisers seem to use (eg) "ACT 1" instead of NOL team names, 
+                                    Prob best to try for NOL team names and if there are none then try this approach...
+                                    */
                                     // DEV ONLY - translate club into state team (2016 had no NOL teams in Eventor)
                                     Organisation organisation = teamResult.getOrganisation().get(0);
                                     organisation = testingOnlyTranslateOrganisationId(organisation, teamResult);
@@ -323,6 +339,9 @@ public class NolScoreCalculator {
                                 // Create NOL Athlete and Result from the IOF PersonResult
                                 Entity nolAthlete = new Entity(personResult, nolCategory);
                                 Result nolResult = new Result(personResult, eventId);
+                                
+                                // Hack to fix membership issues (hard coded)
+                                nolAthlete = NolTeamCorrection.fixNolTeamMembership(nolAthlete);
 
                                 // Do we need a new athlete or create a new one?
                                 if (NOLSeasonResults.contains(nolAthlete)) {
@@ -353,25 +372,7 @@ public class NolScoreCalculator {
                                         break;
                                     case NolScores:
                                         nolTeamResults.get(index).addIndividualResult(nolResult);                                        
-                                }
-                                
-                                /*for (Result res : nolTeamResults) {
-                                    // Check Organisation Id Value                                
-                                    if (res.getOrganisation().getId().getValue().equals(personResult.getOrganisation().getId().getValue())) {
-
-                                        switch (teamResultType) {
-                                            case RaceTimes:
-                                                res.addIndividualResult(personResult); // Add result
-                                                break;
-                                            case Placings:
-                                                res.addIndividualResult(personResult, teamResultType);
-                                                break;
-                                            case NolScores:
-                                                res.addIndividualResult(nolResult);
-                                        }
-                                        break;   // No need to keep looking in nolTeamResults
-                                    }
-                                }*/
+                                }                            
                             }
                         }
 
@@ -393,15 +394,42 @@ public class NolScoreCalculator {
                             nolTeamResult.calculateScore();
 
                             // Add these race results to teams
-                            Entity thisNolTeam = new Entity(nolTeamResult.getOrganisation(), nolCategory);
-                            int indexOfNolTeam = NOLSeasonTeams[nolCategory.ordinal()].indexOf(thisNolTeam);
+                            if (isRelay && isMixedRelay) {
+                                // Copy Mixed results into Men and Women
+                                NolCategory[] nolCategories = new NolCategory[2];
+                                switch (nolCategory) {
+                                    case SeniorMixed:
+                                        nolCategories[0] = nolCategory.SeniorMen;
+                                        nolCategories[1] = nolCategory.SeniorWomen;
+                                        break;
+                                    case JuniorMixed:
+                                        nolCategories[0] = nolCategory.JuniorMen;
+                                        nolCategories[1] = nolCategory.JuniorWomen;
+                                }
 
-                            if (indexOfNolTeam == -1 || thisNolTeam.name.equals("No Team")) {
-                                continue;
-                            } // NOT in a NOL team!
-                            // Add this result 
+                                for (NolCategory category : nolCategories) {
+                                    Entity thisNolTeam = new Entity(nolTeamResult.getOrganisation(), category);
+                                    int indexOfNolTeam = NOLSeasonTeams[category.ordinal()].indexOf(thisNolTeam);
 
-                            NOLSeasonTeams[nolCategory.ordinal()].get(indexOfNolTeam).addResult(nolTeamResult);
+                                    if (indexOfNolTeam == -1 || thisNolTeam.name.equals("No Team")) {
+                                        continue;
+                                    } // NOT in a NOL team!
+                                    // Add this result 
+
+                                    NOLSeasonTeams[category.ordinal()].get(indexOfNolTeam).addResult(nolTeamResult);
+                                }
+                            } 
+                            else {
+                                Entity thisNolTeam = new Entity(nolTeamResult.getOrganisation(), nolCategory);
+                                int indexOfNolTeam = NOLSeasonTeams[nolCategory.ordinal()].indexOf(thisNolTeam);
+
+                                if (indexOfNolTeam == -1 || thisNolTeam.name.equals("No Team")) {
+                                    continue;
+                                } // NOT in a NOL team!
+                                // Add this result 
+
+                                NOLSeasonTeams[nolCategory.ordinal()].get(indexOfNolTeam).addResult(nolTeamResult);
+                            }
                         }                        
                     }
                 }
@@ -494,7 +522,7 @@ public class NolScoreCalculator {
                 }
             }
 
-            int numberOfNolCategories = NolCategory.values().length;
+            int numberOfNolCategories = NolCategory.values().length - NUMBER_MIXED_CATEGORIES; // We don't count the two mixed categories in here
             ArrayList<Entity>[] resultsForPrinting = new ArrayList[numberOfNolCategories * 2];  // Individual + Team Results
             resultsForPrinting[NolCategory.SeniorMen.ordinal()] = seniorMenResults;
             resultsForPrinting[NolCategory.SeniorWomen.ordinal()] = seniorWomenResults;
@@ -503,6 +531,9 @@ public class NolScoreCalculator {
 
             // Add Team Results to resultsForPrinting
             for (NolCategory nolCategory : NolCategory.values()) {
+                
+                if (nolCategory == NolCategory.SeniorMixed || nolCategory == NolCategory.JuniorMixed) continue;
+                
                 resultsForPrinting[numberOfNolCategories + nolCategory.ordinal()] = NOLSeasonTeams[nolCategory.ordinal()];
             }
 
@@ -521,6 +552,7 @@ public class NolScoreCalculator {
                 }
                 
             progressBar.updateBar(100, "Done..." + "\n");
+            progressBar.updateBar(100, "You can close now this window." + "\n");
         }        
     }
     
@@ -553,39 +585,8 @@ public class NolScoreCalculator {
         
         String lastIndEventPromptString = "Is " + lastIndividualEvent.getName() + " the last individual race of the season?";
         int lastIndEventSelection = JOptionPane.showConfirmDialog(null, lastIndEventPromptString, "Important!", JOptionPane.YES_NO_OPTION);
-        if (lastIndEventSelection == JOptionPane.YES_OPTION) {
-            return true;            
-        }
-        else return false;
+        return lastIndEventSelection == JOptionPane.YES_OPTION;
     }
-
-    /*
-    private static String getFileExtension(File file) {
-        String fileName = file.getName();
-        if (fileName.lastIndexOf(".") != -1 && fileName.lastIndexOf(".") != 0) {
-            return fileName.substring(fileName.lastIndexOf(".") + 1);
-        } else {
-            return "";
-        }
-    }
-    */
-
-    /*
-    private static boolean isUsingEliteClasses(ResultList resultList) {
-
-        boolean usingEliteClasses = false;
-
-        // Run through and decide if we have Elite (E) or A classes
-        for (int j = 0; j < resultList.getClassResult().size(); j++) {
-            String className = resultList.getClassResult().get(j).getClazz().getName();
-            if (className.contains("M21E") || className.contains("W21E")) {
-                usingEliteClasses = true;
-            }
-        }
-
-        return usingEliteClasses;
-    }
-    */
 
     private static List<ClassResultExtended> getClassesForAgeCategory(ResultList resultList, NolAgeCategory nolAgeCategory) {
 
@@ -768,6 +769,14 @@ public class NolScoreCalculator {
 
         return (usingEAclasses && usingEBclasses);
     }
+    
+    private static boolean getIsMixedRelay(ArrayList<ClassResultExtended> resultList){
+        for (ClassResultExtended classResult : resultList) {
+            if (classResult.getClazz().getName().toLowerCase().contains("mixed"))
+                return true;
+        }
+        return false;
+    }
 
     private static ArrayList<ClassResultExtended> trimResultList(ResultList resultList, boolean isRelay) {
 
@@ -904,6 +913,15 @@ public class NolScoreCalculator {
     private static NolCategory getNolCategory(String className) {
         // Decide what NOL Category this result was in
         NolCategory nolCategory;
+        
+        if (className.toLowerCase().contains("mixed")) {
+            if (className.toLowerCase().contains("junior")) {
+                return NolScoreCalculator.NolCategory.JuniorMixed;
+            }
+            else {
+                return NolScoreCalculator.NolCategory.SeniorMixed;
+            }
+        }
 
         if (className.contains("W")) {
             if (className.contains("21")) {
@@ -944,12 +962,12 @@ public class NolScoreCalculator {
 
     private static Map<String, String> createNolOrganisationsMap() {
         Map<String, String> myMap = new HashMap<>();
-        myMap.put("628", "Vic Nuggets");
-        myMap.put("629", "ACT Cockatoos");
+        myMap.put("628", "VIC Victoria");
+        myMap.put("629", "CBR Cockatoos");
         myMap.put("630", "NSW Stingers");
-        myMap.put("631", "Qld Cyclones");
+        myMap.put("631", "QLD Cyclones");
         myMap.put("632", "SA Arrows");
-        myMap.put("633", "Tas Foresters");
+        myMap.put("633", "TAS Foresters");
         myMap.put("634", "WA Nomads");
         //myMap.put("0", "No Team");
         return myMap;
@@ -957,12 +975,12 @@ public class NolScoreCalculator {
 
     public static Map<String, String> nolOrganisationLongShortNamesMap() {
         Map<String, String> myMap = new HashMap<>();
-        myMap.put("Vic Nuggets", "VN V");
-        myMap.put("ACT Cockatoos", "CC A");
+        myMap.put("VIC Victoria", "VN V");
+        myMap.put("CBR Cockatoos", "CC A");
         myMap.put("NSW Stingers", "ST N");
-        myMap.put("Qld Cyclones", "QC Q");
+        myMap.put("QLD Cyclones", "QC Q");
         myMap.put("SA Arrows", "SW S");
-        myMap.put("Tas Foresters", "TF T");
+        myMap.put("TAS Foresters", "TF T");
         myMap.put("WA Nomads", "WN W");
         //myMap.put("0", "No Team");
         return myMap;
@@ -970,12 +988,12 @@ public class NolScoreCalculator {
 
     public static Map<String, String> nolOrganisationShortLongNamesMap() {
         Map<String, String> myMap = new HashMap<>();
-        myMap.put("VN V", "Vic Nuggets");
-        myMap.put("CC A", "ACT Cockatoos");
+        myMap.put("VN V", "VIC Victoria");
+        myMap.put("CC A", "CBR Cockatoos");
         myMap.put("ST N", "NSW Stingers");
-        myMap.put("QC Q", "Qld Cyclones");
+        myMap.put("QC Q", "QLD Cyclones");
         myMap.put("SW S", "SA Arrows");
-        myMap.put("TF T", "Tas Foresters");
+        myMap.put("TF T", "TAS Foresters");
         myMap.put("WN W", "WA Nomads");
         //myMap.put("0", "No Team");
         return myMap;

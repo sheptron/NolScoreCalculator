@@ -40,8 +40,24 @@ public class EventorInterface {
     
     private static final String EVENTOR_BASE = "https://eventor.orienteering.asn.au/api/";
     
-    public static EventList getEventList(String fromDate, String toDate) {
-    String classificationIds = "1,2"; // 1=Championship, 2=National
+    public static EventorApi.EventList getEventList(String fromDate, String toDate) {
+        /*
+        
+        GET https://eventor.orientering.se/api/events
+        Returnerar en lista med tävlingar som matchar sökparametrarna.
+        
+        fromDate 		0000-01-01              Startdatum (åååå-mm-dd).
+        toDate                  9999-12-31              Slutdatum (åååå-mm-dd).
+        fromModifyDate 		0000-01-01 00:00:00 	Inkluderar endast tävlingar som ändrats efter denna tidpunkt (åååå-mm-dd hh:mm:ss).
+        toModifyDate 		9999-12-31 23:59:59 	Inkluderar endast tävlingar som ändrats före denna tidpunkt (åååå-mm-dd hh:mm:ss).
+        eventIds                                        Kommaseparerad lista med tävlings-id:n. Utelämna för att inkludera alla tävlingar.
+        organisationIds                                 Kommaseparerad lista med organisations-id:n för arrangörsklubbarna. Om ett distrikts organisations-id anges kommer alla tävlingar som arrangeras av en klubb i distriktet att inkluderas. Utelämna för att inkludera alla tävlingar.
+        classificationIds                               Kommaseparerad lista med tävlingstyps-id:n, där 1=mästerskapstävling, 2=nationell tävling, 3=distriktstävling, 4=närtävling, 5=klubbtävling, 6=internationell tävling. Utelämna för att inkludera alla tävlingar.
+        includeEntryBreaks 		false           Sätt till true för att inkludera tävlingens anmälningsstopp.
+        includeAttributes 		false           Sätt till true för att inkludera tävlingens tävlingsattribut.
+        */
+    
+        String classificationIds = "1,2"; // 1=Championship, 2=National
 
             String eventorQuery = "events?fromDate=" + fromDate + "&toDate=" + toDate + "&classificationIds=" + classificationIds;
             String iofXmlType = "EventList";
@@ -49,9 +65,9 @@ public class EventorInterface {
             String xmlString = EventorInterface.getEventorData(eventorQuery, "From Date " + fromDate + " To Date " + toDate);
 
             // Hack here - for some reason Eventor doesn't put in the iofVersion number so parsing the XML fails
-            xmlString = xmlString.replace("<EventList>", "<EventList xmlns=\"http://www.orienteering.org/datastandard/3.0\" iofVersion=\"3.0\">");
+            //xmlString = xmlString.replace("<EventList>", "<EventList xmlns=\"http://www.orienteering.org/datastandard/3.0\" iofVersion=\"3.0\">");
 
-            EventList eventList = JAXB.unmarshal(new StringReader(xmlString), EventList.class);
+            EventorApi.EventList eventList = JAXB.unmarshal(new StringReader(xmlString), EventorApi.EventList.class);
             
             return eventList;
     }
@@ -96,12 +112,12 @@ public class EventorInterface {
         return xmlString;
     }
             
-    public static ResultList downloadResultList(EventList eventList, int eventIndex) throws Exception {
+    public static ResultList downloadResultList(EventorApi.EventList eventList, int eventIndex) throws Exception {
         
-        String eventId = eventList.getEvent().get(eventIndex).getEventorId().getValue();
+        String eventId = eventList.getEvent().get(eventIndex).getEventId().getContent(); //.getEventorId().getValue();
                 
         String eventorQuery = "results/event/iofxml?eventId=" + eventId;
-        String description = eventList.getEvent().get(eventIndex).getName();
+        String description = eventList.getEvent().get(eventIndex).getName().getContent();
         String xmlString = getEventorData(eventorQuery, description);
           
         if (xmlString.equals("")){
