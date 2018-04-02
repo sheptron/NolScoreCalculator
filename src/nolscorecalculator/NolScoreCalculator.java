@@ -43,6 +43,7 @@ import nolscorecalculator.Result.TeamResultType;
  */
 public class NolScoreCalculator {
 
+    // TODO Once a team member always a team member (if someone enters a race as eg MFR, but some races as VIC, then make them always VIC)
     // TODO Juniors included in Senior results for Sprint Races (just dodgy this up)        
     // TODO handle classes being voided or cancelled
     // TODO user select date range
@@ -341,7 +342,7 @@ public class NolScoreCalculator {
                                 Result nolResult = new Result(personResult, eventId);
                                 
                                 // Hack to fix membership issues (hard coded)
-                                nolAthlete = NolTeamCorrection.fixNolTeamMembership(nolAthlete);
+                                //nolAthlete = NolTeamCorrection.fixNolTeamMembership(nolAthlete);
 
                                 // Do we need a new athlete or create a new one?
                                 if (NOLSeasonResults.contains(nolAthlete)) {
@@ -399,12 +400,12 @@ public class NolScoreCalculator {
                                 NolCategory[] nolCategories = new NolCategory[2];
                                 switch (nolCategory) {
                                     case SeniorMixed:
-                                        nolCategories[0] = nolCategory.SeniorMen;
-                                        nolCategories[1] = nolCategory.SeniorWomen;
+                                        nolCategories[0] = NolCategory.SeniorMen;
+                                        nolCategories[1] = NolCategory.SeniorWomen;
                                         break;
                                     case JuniorMixed:
-                                        nolCategories[0] = nolCategory.JuniorMen;
-                                        nolCategories[1] = nolCategory.JuniorWomen;
+                                        nolCategories[0] = NolCategory.JuniorMen;
+                                        nolCategories[1] = NolCategory.JuniorWomen;
                                 }
 
                                 for (NolCategory category : nolCategories) {

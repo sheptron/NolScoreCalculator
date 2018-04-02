@@ -120,6 +120,11 @@ public class Entity {
     
     private void standardiseOrganisationNames(){
         
+        if (this.organisation.getId() == null){
+            this.organisation = new Organisation();
+            this.organisation.setId(new Id());
+        }
+        
         //Map<String, String> nolOrganisations
         this.organisation.setName(NolScoreCalculator.nolOrganisations.getOrDefault(this.organisation.getId().getValue(),""));
         this.organisation.setShortName(NolScoreCalculator.nolOrganisationLongShortNamesMap().getOrDefault(this.organisation.getName(), ""));
@@ -350,6 +355,17 @@ public class Entity {
             // We're having some Oceania results with NULL Id
             //return false;
         }
+        
+        // Some guys enter races in NOL teams and in regular clubs... Don't consider them to be the same person
+        /*
+        if (this.organisation.getId() != null && other.organisation.getId() != null) {
+            if (this.organisation.getId().getValue() != null && other.organisation.getId().getValue() != null) {
+                if (NolScoreCalculator.USE_STRICT_COMPETITOR_MATCHING && !this.organisation.getId().getValue().equals(other.getId().getValue())) {
+                    return false;
+                }
+            }
+        }
+        */
         return true;
     }    
 //    @Override
