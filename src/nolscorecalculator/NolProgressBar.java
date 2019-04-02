@@ -31,7 +31,7 @@ public class NolProgressBar extends JPanel {
     // add to JPanel
     add(pbar);
     
-    taskOutput = new JTextArea(5, 40);
+    taskOutput = new JTextArea(10, 80);
     taskOutput.setMargin(new Insets(5,5,5,5));
     taskOutput.setEditable(false);
     

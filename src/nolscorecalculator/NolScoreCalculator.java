@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -48,6 +49,7 @@ public class NolScoreCalculator {
     // TODO handle classes being voided or cancelled
     // TODO user select date range
     // TODO Individual point scores don't display club if not NOL team
+    // TODO we need a way to disqualify runners who didn't wear their NOL team uniform
     
     public static final boolean DEV = false;
     
@@ -107,9 +109,7 @@ public class NolScoreCalculator {
 
     public static void main(String[] args)  {
         { //throws MalformedURLException, IOException, JAXBException, SAXException, ParserConfigurationException
-            
-            
-            ///
+                      
             final NolProgressBar progressBar = new NolProgressBar();
 
             JFrame frame = new JFrame("NOL Score Calculator Progress");
@@ -117,49 +117,23 @@ public class NolScoreCalculator {
             frame.setContentPane(progressBar);
             frame.pack();
             frame.setVisible(true);
-            ///       
             
-            // TODO get dates to/from from user       
-            //DateSelector dateSelector = new DateSelector(); 
-            //String startDate = dateSelector.getStartDate();
-            //int jkl = 0;
-            //dateSelector.dispose();
+            // Get date (year) from user (TODO -get month/day as well)
+            int thisYearInt = Year.now().getValue();
+            int numberOfYearsOption = 5;
+            String[] choices = new String[numberOfYearsOption];
+            for (int ii=0; ii<numberOfYearsOption; ii++){
+                choices[ii] = String.format("%d",thisYearInt-ii);
+            }
+            String input = (String) JOptionPane.showInputDialog(null, "Select year...", "NOL Season Selection", JOptionPane.QUESTION_MESSAGE, null, choices, choices[0]);
             
-            //EventorDateSelector dateSelector = new EventorDateSelector();
-            //dateSelector.run();
+            if(input==null) {
+                System.exit(0);
+                return;
+            }        
             
-            // Testing                      
-            /*
-            Map<Integer, Event> num2Event = new HashMap<>();         
-            int raceNumber = 0;
-            String [] strings = new String[5];
-            for (int i = 0; i<5; i++) {
-                raceNumber++;
-                Event event = new Event();
-                String name = String.format("Event Number %d", raceNumber);
-                event.setName(name);
-                Id id = new Id();
-                id.setValue(String.format("%d", raceNumber));
-                event.setId(id);
-                num2Event.put(raceNumber, event);
-                strings[i] = name;
-            } 
-            
-            Object[] options = {"Done", "Move Up", "Move Down"};
-            JList  jlist = new JList(strings);
-            jlist.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-            int s = -1;
-            // Done = 0; Up = 1; Down = 2;
-            while (s != 0) {
-                // Do a resort according to the users last button press
-                // We need to keep track of where things are at...
-                s = JOptionPane.showOptionDialog(null, new JScrollPane(jlist), "Title", JOptionPane.YES_NO_CANCEL_OPTION,JOptionPane.QUESTION_MESSAGE,null,options,options[0]);
-            }*/
-            // END Testing
-            
-            // TODO get date from user
-            String fromDate = "2018-03-01";//"2017-03-01";
-            String toDate = "2018-03-31"; //2017-10-31";
+            String fromDate = input + "-01-01";//"2017-03-01";
+            String toDate = input + "-12-31"; //2017-10-31";
             
             String thisYear = fromDate.substring(0, 4);
             
@@ -244,19 +218,7 @@ public class NolScoreCalculator {
                     numberOfRaces += 1;
                     
                     Event thisEvent = generateEventStage(thisResultList.getEvent(), eventRaceIds, raceNumber, numberOfRacesInThisEvent);
-                    /*
-                    Id eventId = new Id();                    
-                    eventId.setValue(eventRaceIds.get(raceNumber-1));
-                    eventId.setType(thisResultList.getEvent().getId().getType());
-                                     
-                    Event mainEvent = thisResultList.getEvent();
-                    Event thisEvent = new Event();
-                    if (numberOfRacesInThisEvent > 1) thisEvent.setName(mainEvent.getName() + " Race " + raceNumber);
-                    else thisEvent.setName(mainEvent.getName());
-                    if (!mainEvent.getForm().isEmpty()) thisEvent.setForm(mainEvent.getForm());                    
-                    thisEvent.setStartTime(mainEvent.getRace().get(raceNumber-1).getStartTime());
-                    thisEvent.setId(eventId);                    
-                    */
+
                     Id eventId = thisEvent.getId();
                     
                     NOLSeasonEventList.add(thisEvent);                                                          
@@ -286,37 +248,36 @@ public class NolScoreCalculator {
                             
                             for (TeamResult teamResult : classResult.getTeamResult()) {
                                 
-                                if (false) {
+                                if (thisEvent.getId().getValue().equals("6392")) {
                                     /* 
                                     TODO organisers seem to use (eg) "ACT 1" instead of NOL team names, 
                                     Prob best to try for NOL team names and if there are none then try this approach...
-                                    */
-                                    // DEV ONLY - translate club into state team (2016 had no NOL teams in Eventor)
-                                    Organisation organisation = teamResult.getOrganisation().get(0);
-                                    organisation = testingOnlyTranslateOrganisationId(organisation, teamResult);
-                                    teamResult.getOrganisation().get(0).setId(organisation.getId());
-                                    teamResult.getOrganisation().get(0).setName(organisation.getName());
-                                    teamResult.getOrganisation().get(0).setShortName(organisation.getShortName());
-                                    // END DEV ONLY
+                                    */                                
+                                    Organisation organisation = testingOnlyTranslateOrganisationId(teamResult);
+                                    teamResult.getOrganisation().clear();
+                                    teamResult.getOrganisation().add(organisation);  
                                 }
+
+                                // Hack for another eventor fuckup                               
+                                if (thisEvent.getId().getValue().equals("6783") && teamResult.getOrganisation().isEmpty()) {
+                                    // Eventor have fucked the results for
+                                    // "Official results for Melbourne Sprint Weekend Race 3, Sprint Relay - NOL Managers only for relay team selections"
+                                    // So we need to fudge it
+                                    Organisation organisation = testingOnlyTranslateOrganisationId(teamResult);
+                                    teamResult.getOrganisation().add(organisation);  
+                                }
+                                //
                                 
-                                // NOL Team 
-                                if (teamResult.getOrganisation() == null || teamResult.getOrganisation().get(0).getId() == null 
+                                // NOL Team                               
+                                if (teamResult.getOrganisation() == null || teamResult.getOrganisation().isEmpty() || teamResult.getOrganisation().get(0).getId() == null 
                                         || nolTeamResultsIndexes.get(teamResult.getOrganisation().get(0).getId().getValue()) == null) {
-                                    // This team isn't a NOL team
+                                    // This team isn't a NOL team   
                                     continue;
                                 }
                                 
                                 // Find the right team result and add this teamResult to it (if a team result already exists it will only replace it if the time is faster)
                                 int index = nolTeamResultsIndexes.get(teamResult.getOrganisation().get(0).getId().getValue());
                                 nolTeamResults.get(index).addRelayResult(teamResult, numberOfLegs);                                
-                                /*for (Result res : nolTeamResults) {
-                                    // Check Organisation Id Value                                
-                                    if (res.getOrganisation().getId().getValue().equals(teamResult.getOrganisation().get(0).getId().getValue())) {
-                                        res.addRelayResult(teamResult, numberOfLegs);
-                                        break;   // No need to keep looking in nolTeamResults
-                                    }
-                                }*/
                             }
                             
                         } 
@@ -358,9 +319,25 @@ public class NolScoreCalculator {
                                 // Team 
                                 if (personResult.getOrganisation() == null || personResult.getOrganisation().getId() == null 
                                         || nolTeamResultsIndexes.get(personResult.getOrganisation().getId().getValue()) == null) {
-                                    // This person isn't in a NOL team
+                                    // This person isn't in a NOL team                                    
                                     continue;
                                 }
+                                
+                                // HACK FOR BELINDA LAWFORD in 2018 QLD WEEKEND
+                                // 6045 and 6046
+                                if (eventId.getValue().equals("6045") || eventId.getValue().equals("6046")){
+                                    if (nolAthlete.name.toLowerCase().contains("belinda lawford")){
+                                        continue;
+                                    }                                                                    
+                                }
+                                
+                                // HACK FOR LIIS JOHANSON in 2018 AUS SPRINT CHAMPIONSHIPS
+                                //if (eventId.getValue().equals("6390")){
+                                //    if (nolAthlete.name.toLowerCase().contains("liis johanson")){
+                                //        continue;
+                                //    }                                                                    
+                                //}
+                                
 
                                 // Find the right team result and add this personResult to it                                
                                 int index = nolTeamResultsIndexes.get(personResult.getOrganisation().getId().getValue());
@@ -1082,29 +1059,27 @@ public class NolScoreCalculator {
         return nolTeamResultsMap;
     }
 
-    private static Organisation testingOnlyTranslateOrganisationId(Organisation organisation, TeamResult teamResult) {
+    private static Organisation testingOnlyTranslateOrganisationId(TeamResult teamResult) {
 
         // When testing on 2016 results
         Organisation newOrganisation = new Organisation();
         Id id = new Id();
-        // The last letter in the short name is the state
-        String shortName = organisation.getShortName();
         String teamName = teamResult.getName().toLowerCase();
 
         String x = "";
         if (teamName.contains("vic")) { //(shortName.endsWith("V")) {
             x = "628";
-        } else if (teamName.contains("act")) {//(shortName.endsWith("A")) {
+        } else if (teamName.contains("act") || teamName.contains("cbr") || teamName.contains("cockatoos")) {
             x = "629";
-        } else if (teamName.contains("nsw")) { //(shortName.endsWith("N")) {
+        } else if (teamName.contains("nsw") || teamName.contains("stingers")) {
             x = "630";
-        } else if (teamName.contains("qld")) { //(shortName.endsWith("Q")) {
+        } else if (teamName.contains("qld") || teamName.contains("cyclones")) {
             x = "631";
-        } else if (teamName.contains("sa")) { //(shortName.endsWith("S")) {
+        } else if (teamName.contains("sa") || teamName.contains("arrows")) {
             x = "632";
-        } else if (teamName.contains("tas")) { //(shortName.endsWith("T")) {
+        } else if (teamName.contains("tas") || teamName.contains("foresters")) {
             x = "633";
-        } else if (teamName.contains("wa")) { //(shortName.endsWith("W")) {
+        } else if (teamName.contains("wa") || teamName.contains("nomads")) {
             x = "634";
         } else {
             x = "0";
