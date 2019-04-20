@@ -14,6 +14,8 @@ import IofXml30.java.PersonResult;
 import IofXml30.java.ResultList;
 import IofXml30.java.ResultStatus;
 import IofXml30.java.TeamResult;
+import java.awt.FileDialog;
+import java.awt.Frame;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -476,7 +478,7 @@ public class NolScoreCalculator {
 
             /////////////////////////////////////
             // Now publish
-            progressBar.updateBar(100, "Writing NOL scores HTML file" + "\n");
+            progressBar.updateBar(100, "Building NOL scores HTML file" + "\n");
             // XML -> (XSLT) -> HTML            
             // Build Result lists for each Category
             // TODO simplify this build (use a loop somehow?)            
@@ -514,9 +516,13 @@ public class NolScoreCalculator {
                 
                 resultsForPrinting[numberOfNolCategories + nolCategory.ordinal()] = NOLSeasonTeams[nolCategory.ordinal()];
             }
+            
+            progressBar.updateBar(100, "Writing NOL scores HTML file" + "\n");
 
             // Get User input - where to save file?
             String outputDirectory = getOutputDirectory();
+            
+            progressBar.updateBar(100, String.format("Save location is %s", outputDirectory) + "\n");
 
             ResultsPrinter resultsPrinter = new ResultsPrinter();
 
@@ -918,23 +924,42 @@ public class NolScoreCalculator {
     }
 
     private static String getOutputDirectory() {
-        // Get Output Directory
-        JFileChooser fc = new JFileChooser();
-        fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        fc.setMultiSelectionEnabled(false);
-        fc.setDialogTitle("Select a directory to save the results file...");
-
-        File folder;
-        File[] listOfFiles;
-        if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-            listOfFiles = new File[1];
-            listOfFiles[0] = fc.getSelectedFile();
-            folder = fc.getSelectedFile().getParentFile();
-            return fc.getSelectedFile().toString();
-
+        String osName = System.getProperty("os.name");
+        String homeDir = System.getProperty("user.home");
+        
+        if (osName.contains("Mac OS")) {            
+            File selectedPath = null;
+            System.setProperty("apple.awt.fileDialogForDirectories", "true");
+            FileDialog fd = new FileDialog(new Frame(), "Choose a file", FileDialog.LOAD);
+            fd.setDirectory(homeDir);
+            fd.setVisible(true);
+            String filename = fd.getDirectory();
+            selectedPath = new File(filename);
+            if (filename == null) {
+                InformationDialog.infoBox("No directory selected, press OK to exit.", "Warning");
+                return "";
+            } else {
+                return selectedPath.toString();
+            }            
         } else {
-            InformationDialog.infoBox("No directory selected, press OK to exit.", "Warning");
-            return "";
+            // Get Output Directory
+            JFileChooser fc = new JFileChooser();
+            fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            fc.setMultiSelectionEnabled(false);
+            fc.setDialogTitle("Select a directory to save the results file...");
+
+            File folder;
+            File[] listOfFiles;
+            if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                listOfFiles = new File[1];
+                listOfFiles[0] = fc.getSelectedFile();
+                folder = fc.getSelectedFile().getParentFile();
+                return fc.getSelectedFile().toString();
+
+            } else {
+                InformationDialog.infoBox("No directory selected, press OK to exit.", "Warning");
+                return "";
+            }
         }
     }
 
