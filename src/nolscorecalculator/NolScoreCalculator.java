@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFormattedTextField.AbstractFormatter;
 import javax.swing.JFrame;
@@ -925,22 +926,11 @@ public class NolScoreCalculator {
 
     private static String getOutputDirectory() {
         String osName = System.getProperty("os.name");
-        String homeDir = System.getProperty("user.home");
+        //
         
-        if (osName.contains("Mac OS")) {            
-            File selectedPath = null;
-            System.setProperty("apple.awt.fileDialogForDirectories", "true");
-            FileDialog fd = new FileDialog(new Frame(), "Choose a file", FileDialog.LOAD);
-            fd.setDirectory(homeDir);
-            fd.setVisible(true);
-            String filename = fd.getDirectory();
-            selectedPath = new File(filename);
-            if (filename == null) {
-                InformationDialog.infoBox("No directory selected, press OK to exit.", "Warning");
-                return "";
-            } else {
-                return selectedPath.toString();
-            }            
+        if (osName.contains("Mac OS")) {  
+            String homeDir = System.getProperty("user.home");
+            return homeDir + "/Desktop";            
         } else {
             // Get Output Directory
             JFileChooser fc = new JFileChooser();
