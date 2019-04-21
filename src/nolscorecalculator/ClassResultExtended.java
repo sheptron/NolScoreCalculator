@@ -22,7 +22,7 @@ public class ClassResultExtended extends ClassResult{
     
     */
     public NolCategory nolCategory;
-    public TeamResultType teamResultType;
+    public TeamResultType teamResultType;   
 
     public ClassResultExtended() {
     }
@@ -53,5 +53,4 @@ public class ClassResultExtended extends ClassResult{
     public void setTeamResultType(TeamResultType teamResultType) {
         this.teamResultType = teamResultType;
     }
-    
 }

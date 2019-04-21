@@ -104,8 +104,10 @@ public class NolScoreCalculator {
     public static ArrayList<Entity>[] NOLSeasonTeams = createNolSeasonTeams();
 
     // Comprehensive list of all possible age categories we're going to count in the NOL
-    private static final String[] VALID_ELITE_CLASSES = {"M21E", "Men 21 Elite", "Men 21E",  "W21E", "Women 21 Elite", "Women 21E", "Mixed Elite Relay"};
-    private static final String[] VALID_JUNIOR_ELITE_CLASSES = {"M17-20E", "M-20E", "Men 20 Elite", "Men 20E", "M20E", "W17-20E", "W-20E", "W20E", "Women 20 Elite", "Women 20E", "Mixed Junior Elite Relay"};
+    private static final String[] VALID_ELITE_CLASSES = {"M21E", "Men 21 Elite", "Men 21E",  "W21E", "Women 21 Elite", "Women 21E", "Mixed Elite Relay", "Senior Elite 21E"};
+    private static final String[] ELITE_MIXED_CLASSES = {"Mixed Elite Relay", "Senior Elite 21E"};
+    private static final String[] VALID_JUNIOR_ELITE_CLASSES = {"M17-20E", "M-20E", "Men 20 Elite", "Men 20E", "M20E", "W17-20E", "W-20E", "W20E", "Women 20 Elite", "Women 20E", "Mixed Junior Elite Relay", "Junior Elite 20E"};
+    private static final String[] JUNIOR_MIXED_CLASSES = {"Mixed Junior Elite Relay", "Junior Elite 20E"};
     // TODO can we try and work out which are the elite classes? Seems event organisers keep finding a different way to same the same thing... 
     private static final String[] VALID_NONELITE_CLASSES = {"M21A", "W21A"};
     private static final String[] VALID_JUNIOR_NONELITE_CLASSES = {"M20A", "W20A", "M18A", "W18A"};
@@ -208,8 +210,14 @@ public class NolScoreCalculator {
                 boolean isRelay = thisResultList.getEvent().getForm().get(0).equals(EventForm.RELAY); 
                 boolean isMixedRelay = false;
                               
-                // Trim the Result List (get rid of non-NOL classes) - just to make things a bit quicker
+                // Trim the Result List (get rid of non-NOL classes) - just to make things a bit quicker              
                 ArrayList<ClassResultExtended> resultList = trimResultList(thisResultList, isRelay);
+                
+                if (resultList.isEmpty()) {
+                    progressBar.updateBar((int)Math.round(100.0*(double)(i+1)/(double)numberOfEvents), "No valid classes found in: " + event.getName().getContent() + "\n");
+                    continue;
+                }
+                
                 // TODO trimResults needs to remove B finals for juniors
                 if (isRelay) isMixedRelay = getIsMixedRelay(resultList);
 
@@ -615,14 +623,19 @@ public class NolScoreCalculator {
         classResults = lookForClasses(resultList, validNonEliteClasses, nolAgeCategory);
 
         // For Juniors we may need to merge 18 and 20
-        classResults = mergeJuniorClasses(classResults);
+        if (nolAgeCategory==NolAgeCategory.Junior) {
+            classResults = mergeJuniorClasses(classResults);
+        }
 
         // TODO what if its still empty?    
         return classResults;
     }
 
     private static ArrayList<ClassResultExtended> mergeJuniorClasses(ArrayList<ClassResultExtended> classResults) {
-        // Merge the M/W18 and M/W20 classes        
+        // Merge the M/W18 and M/W20 classes    
+        if (classResults.isEmpty()) {
+            return classResults;
+        }
 
         // Find where the Men and Womens classes are
         ArrayList<Integer> juniorMen = indexOfAllInNolCategory(NolCategory.JuniorMen, classResults);
@@ -703,25 +716,49 @@ public class NolScoreCalculator {
 
                     // This is a class we're interested in 
                     ClassResultExtended newClassResult = new ClassResultExtended(classResult);
-                    //newClassResult = (ClassResultExtended) classResult;
-                    if (className.contains("M")) {
-                        switch (nolAgeCategory) {
-                            case Junior:
-                                newClassResult.setNolCategory(NolCategory.JuniorMen);
-                                break;
-                            default:
-                                newClassResult.setNolCategory(NolCategory.SeniorMen);
-                        }
-                    } else {
-                        switch (nolAgeCategory) {
-                            case Junior:
-                                newClassResult.setNolCategory(NolCategory.JuniorWomen);
-                                break;
-                            default:
-                                newClassResult.setNolCategory(NolCategory.SeniorWomen);
+                                       
+                    NolCategory nolCategory = getNolCategory(className);
+                    newClassResult.setNolCategory(nolCategory);                    
+                    
+                    /*
+                    switch (nolAgeCategory){
+                        case Senior:
+                            for (String mixedClass : ELITE_MIXED_CLASSES){
+                                if (className.contains(mixedClass)) {
+                                    newClassResult.setNolCategory(NolCategory.SeniorMixed);
+                                    newClassResult.setMixedCategory(true);
+                                }                                
+                            }                              
+                            break;
+                        case Junior:
+                            for (String mixedClass : JUNIOR_MIXED_CLASSES){
+                                if (className.contains(mixedClass)) {
+                                    newClassResult.setNolCategory(NolCategory.JuniorMixed);                                    
+                                    newClassResult.setMixedCategory(true);
+                                }
+                            }
+                    }
+                   
+                    if (!newClassResult.isMixedCategory()) {
+                        if (className.contains("M")) {
+                            switch (nolAgeCategory) {
+                                case Junior:
+                                    newClassResult.setNolCategory(NolCategory.JuniorMen);
+                                    break;
+                                default:
+                                    newClassResult.setNolCategory(NolCategory.SeniorMen);
+                            }
+                        } else {
+                            switch (nolAgeCategory) {
+                                case Junior:
+                                    newClassResult.setNolCategory(NolCategory.JuniorWomen);
+                                    break;
+                                default:
+                                    newClassResult.setNolCategory(NolCategory.SeniorWomen);
+                            }
                         }
                     }
-
+                    */
                     // Set default team score calc method
                     newClassResult.setTeamResultType(TeamResultType.RaceTimes);
 
@@ -757,8 +794,14 @@ public class NolScoreCalculator {
     
     private static boolean getIsMixedRelay(ArrayList<ClassResultExtended> resultList){
         for (ClassResultExtended classResult : resultList) {
-            if (classResult.getClazz().getName().toLowerCase().contains("mixed"))
-                return true;
+            NolCategory nolCategory = classResult.getNolCategory();
+            if (nolCategory == NolCategory.SeniorMixed || nolCategory == NolCategory.JuniorMixed)
+                    return true;
+            
+            //if (classResult.isMixedCategory())
+            //    return true;
+            //if (classResult.getClazz().getName().toLowerCase().contains("mixed"))
+            //    return true;
         }
         return false;
     }
@@ -899,7 +942,7 @@ public class NolScoreCalculator {
         // Decide what NOL Category this result was in
         NolCategory nolCategory;
         
-        if (className.toLowerCase().contains("mixed")) {
+        /*if (className.toLowerCase().contains("mixed")) {
             if (className.toLowerCase().contains("junior")) {
                 return NolScoreCalculator.NolCategory.JuniorMixed;
             }
@@ -920,8 +963,50 @@ public class NolScoreCalculator {
         } else {
             nolCategory = NolScoreCalculator.NolCategory.JuniorMen;
         }
+        */
+        NolAgeCategory nolAgeCategory;
+        
+        if (className.toLowerCase().contains("senior") || className.contains("21")) {
+            nolAgeCategory = NolAgeCategory.Senior;
+        }
+        else {
+            nolAgeCategory = NolAgeCategory.Junior;
+        }
+        
+        switch (nolAgeCategory) {
+            case Senior:
+                for (String mixedClass : ELITE_MIXED_CLASSES) {
+                    if (className.contains(mixedClass)) {
+                        return NolCategory.SeniorMixed;                        
+                    }
+                }
+                break;
+            case Junior:
+                for (String mixedClass : JUNIOR_MIXED_CLASSES) {
+                    if (className.contains(mixedClass)) {
+                        return NolCategory.JuniorMixed;
+                    }
+                }
+        }
 
-        return nolCategory;
+        //
+        if (className.contains("W")) {
+            switch (nolAgeCategory) {
+                case Junior:
+                    return NolCategory.JuniorWomen;                    
+                default:
+                    return NolCategory.SeniorWomen;
+            }
+        } else {
+            switch (nolAgeCategory) {
+                case Junior:
+                    return NolCategory.JuniorMen;
+                default:
+                    return NolCategory.SeniorMen;
+            }
+        }
+
+        //return nolCategory;
     }
 
     private static String getOutputDirectory() {

@@ -25,6 +25,7 @@ import NolXml10.NolResultList;
 import NolXml10.ObjectFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Collections;
@@ -167,9 +168,12 @@ public class ResultsPrinter {
         // Now convert to HTML
         try {
             TransformerFactory tFactory = TransformerFactory.newInstance();
+            
+            InputStream is = getClass().getResourceAsStream("NolHtmlResults.xsl");
+            Transformer transformer = tFactory.newTransformer(new javax.xml.transform.stream.StreamSource(is));
 
-            Transformer transformer
-                    = tFactory.newTransformer(new javax.xml.transform.stream.StreamSource("src/nolscorecalculator/NolHtmlResults.xsl"));
+            //Transformer transformer
+            //        = tFactory.newTransformer(new javax.xml.transform.stream.StreamSource("NolHtmlResults.xsl")); /* src/nolscorecalculator */
             
             transformer.transform( new StreamSource(new StringReader(xmlStringWriter.toString())), 
                     new javax.xml.transform.stream.StreamResult(new FileOutputStream(outFile)));            
