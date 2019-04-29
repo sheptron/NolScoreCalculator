@@ -21,14 +21,14 @@ public class NolTeamResultCompare implements Comparator<Result> {
         // 0 if o1 and o2 are equal
         
         // Always put teams of 3 runners ahead of teams with 2, which go ahead of teams of 1 
-        // Fudge this by adding on 100^(3+1-numRunners) minutes, so teams with only 2 runners will have total time 10000mins plus their actual time
+        // Fudge this by adding on 100^(3+1-numRunners) minutes, so teams with only 2 runners will have total time 10000secs plus their actual time
         
         int fudge1 = Result.RUNNERS_TO_COUNT + 1 - Math.min(Result.RUNNERS_TO_COUNT, o1.getNumberOfIndividualResults());
         int fudge2 = Result.RUNNERS_TO_COUNT + 1 - Math.min(Result.RUNNERS_TO_COUNT, o2.getNumberOfIndividualResults());
         
-        double o1Value = o1.getRaceTime() + Math.pow(100.0,(double) fudge1);
+        double o1Value = o1.getRaceTime() + Math.pow(1000.0,(double) fudge1);
         
-        double o2Value = o2.getRaceTime() + Math.pow(100.0,(double) fudge2);
+        double o2Value = o2.getRaceTime() + Math.pow(1000.0,(double) fudge2);
         
         if (o1Value < o2Value){
             return -1;
