@@ -261,8 +261,7 @@ public class Entity {
                 return SENIORS_NUMBER_OF_RACES_TO_COUNT;                    
             }
             else { // Juniors
-                // TODO this is a hack - we need to sort out how to achieve this properly                
-                this.numberOfRacesToCount = 8; //(int) Math.ceil((double) numberOfEvents / 2.0);
+                this.numberOfRacesToCount = (int) Math.ceil((double) numberOfEvents / 2.0);
             }
         }                
         
