@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import javax.swing.JFileChooser;
 import javax.swing.JFormattedTextField.AbstractFormatter;
@@ -961,13 +962,13 @@ public class NolScoreCalculator {
             nolCategory = NolScoreCalculator.NolCategory.JuniorMen;
         }
         */
-        NolAgeCategory nolAgeCategory;
+        NolAgeCategory nolAgeCategory;          
         
-        if (className.toLowerCase().contains("senior") || className.contains("21")) {
-            nolAgeCategory = NolAgeCategory.Senior;
+        if (className.toLowerCase().contains("junior") || className.contains("20")) {
+            nolAgeCategory = NolAgeCategory.Junior;
         }
         else {
-            nolAgeCategory = NolAgeCategory.Junior;
+            nolAgeCategory = NolAgeCategory.Senior;
         }
         
         switch (nolAgeCategory) {
