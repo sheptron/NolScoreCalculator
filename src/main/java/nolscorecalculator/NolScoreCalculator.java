@@ -5,28 +5,15 @@
  */
 package nolscorecalculator;
 
-import IofXml30.java.ClassResult;
-import IofXml30.java.Event;
-import IofXml30.java.EventForm;
-import IofXml30.java.Id;
-import IofXml30.java.Organisation;
-import IofXml30.java.PersonResult;
-import IofXml30.java.ResultList;
-import IofXml30.java.ResultStatus;
-import IofXml30.java.TeamResult;
+import IofXml30.java.*;
+
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Year;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.Map;
 import javax.swing.JFileChooser;
 import javax.swing.JFormattedTextField.AbstractFormatter;
@@ -37,6 +24,7 @@ import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 import javax.xml.bind.JAXBException;
 import javax.xml.transform.TransformerException;
+
 import nolscorecalculator.Result.TeamResultType;
 
 /**
@@ -51,6 +39,16 @@ public class NolScoreCalculator {
     // TODO user select date range
     // TODO Individual point scores don't display club if not NOL team
     // TODO we need a way to disqualify runners who didn't wear their NOL team uniform
+
+
+    // 2021 Additions
+    // M/W18A (sometimes) count
+    // TODO add in M/W18
+    // If it's a long race they score approx half (INDIVIDUAL_SCORES_MW18)
+    // If it's NOT a long race then merge the classes
+    // TODO prompt the user: do you want M/W18 to count?
+    // TODO if yes, then do you want to merge the 18 and 20 class results?
+    // In long distance races where MW18 classes are offered as well as MW20, only the MW20 results count toward the team points score.
     
     public static final boolean DEV = false;
     
@@ -81,17 +79,17 @@ public class NolScoreCalculator {
                     throw new IllegalArgumentException();
             }
         }
-    };
+    }
 
     public enum NolAgeCategory {
-        Senior, Junior;
+        Senior, Junior
     }
     
     public static final int NUMBER_MIXED_CATEGORIES = 2;
 
     public enum NolTeamName {
         Arrows, Cockatoos, Cyclones, Foresters, Nomads, Nuggets, Stingers
-    };
+    }
 
     // Map of Eventor ID to Team Names - hard coded, maybe not a good idea? 
     // TODO Can we determine NOL teams from Eventor download only?
@@ -104,15 +102,16 @@ public class NolScoreCalculator {
     // Comprehensive list of all possible age categories we're going to count in the NOL
     private static final String[] VALID_ELITE_CLASSES = {"M21E", "Men 21 Elite", "Men 21E",  "W21E", "Women 21 Elite", "Women 21E", "Mixed Elite Relay", "Senior Elite 21E"};
     private static final String[] ELITE_MIXED_CLASSES = {"Mixed Elite Relay", "Senior Elite 21E"};
-    private static final String[] VALID_JUNIOR_ELITE_CLASSES = {"M17-20E", "M-20E", "Men 20 Elite", "Men 20E", "M20E", "W17-20E", "W-20E", "W20E", "Women 20 Elite", "Women 20E", "Mixed Junior Elite Relay", "Junior Elite 20E"};
+    private static final String[] VALID_JUNIOR_ELITE_CLASSES = {"M17-20E", "M-20E", "Men 20 Elite", "Men 20E", "M20E", "W17-20E", "W-20E", "W20E", "Women 20 Elite", "Women 20E", "Mixed Junior Elite Relay", "Junior Elite 20E", "Men 18 Elite", "M18E", "Women 18 Elite", "W18E"};
     private static final String[] JUNIOR_MIXED_CLASSES = {"Mixed Junior Elite Relay", "Junior Elite 20E"};
     // TODO can we try and work out which are the elite classes? Seems event organisers keep finding a different way to same the same thing... 
     private static final String[] VALID_NONELITE_CLASSES = {"M21A", "W21A"};
     private static final String[] VALID_JUNIOR_NONELITE_CLASSES = {"M20A", "W20A", "M18A", "W18A"};
+    private static final String SUBJUNIOR_IDENTIFIER = "18";
 
     public static void main(String[] args)  {
         { //throws MalformedURLException, IOException, JAXBException, SAXException, ParserConfigurationException
-                      
+
             final NolProgressBar progressBar = new NolProgressBar();
 
             JFrame frame = new JFrame("NOL Score Calculator Progress");
@@ -123,7 +122,7 @@ public class NolScoreCalculator {
             
             // Get date (year) from user (TODO -get month/day as well)
             int thisYearInt = Year.now().getValue();
-            int numberOfYearsOption = 5;
+            int numberOfYearsOption = 3;
             String[] choices = new String[numberOfYearsOption];
             for (int ii=0; ii<numberOfYearsOption; ii++){
                 choices[ii] = String.format("%d",thisYearInt-ii);
@@ -222,18 +221,96 @@ public class NolScoreCalculator {
                 // There may be more than one race
                 int numberOfRacesInThisEvent = thisResultList.getEvent().getRace().size();
 
-                for (int raceNumber = 1; raceNumber <= numberOfRacesInThisEvent; raceNumber++) { 
-                    
+                for (int raceNumber = 1; raceNumber <= numberOfRacesInThisEvent; raceNumber++) {
+
+                    Event thisEvent = generateEventStage(thisResultList.getEvent(), eventRaceIds, raceNumber, numberOfRacesInThisEvent);
+
+                    /*
+                    2021 Rule Change Junior Fuckaround:
+                    For this race decide whether we're going to MERGE 18 & 20 or just give the 18s reduced points
+                    */
+
+                    // TODO when the 18s and 20s are on DIFFERENT courses
+                    boolean mergeJuniors = isMergeJuniorClasses(resultList,raceNumber,thisEvent);
+
+                    // It's going to be messy
+                    // Go through resultList and remove results that aren't from this race number
+                    ArrayList<ClassResultExtended> raceResultList = new ArrayList<ClassResultExtended>();
+                    ArrayList<ClassResultExtended> thisRaceResultList = getRaceResults(resultList, raceNumber);
+
+                    if (!isRelay && mergeJuniors) {
+
+                        // Do whatever we need to do to merge the junior classes (messy)
+
+                        // Seniors
+                        ArrayList<ClassResultExtended> seniorClassList = new ArrayList<ClassResultExtended>();
+                        ArrayList<ClassResultExtended> subJuniorClassList = new ArrayList<ClassResultExtended>();
+                        ArrayList<ClassResultExtended> juniorClassList = new ArrayList<ClassResultExtended>();
+                        for (ClassResultExtended classResult : thisRaceResultList) {
+                            if (classResult.getNolCategory().equals(NolCategory.SeniorMen)) {
+                                seniorClassList.add(classResult);
+                            }
+                            if (classResult.getNolCategory().equals(NolCategory.SeniorWomen)) {
+                                seniorClassList.add(classResult);
+                            }
+                            if (classResult.getNolCategory().equals(NolCategory.JuniorMen)) {
+                                if (classResult.getClazz().getName().contains(SUBJUNIOR_IDENTIFIER)) {
+                                    subJuniorClassList.add(classResult);
+                                }
+                                else {
+                                    juniorClassList.add(classResult);
+                                }
+                            }
+                            if (classResult.getNolCategory().equals(NolCategory.JuniorWomen)) {
+                                if (classResult.getClazz().getName().contains(SUBJUNIOR_IDENTIFIER)) {
+                                    subJuniorClassList.add(classResult);
+                                }
+                                else {
+                                    juniorClassList.add(classResult);
+                                }
+                            }
+                        }
+                        // Now merge junior classes
+                        for (ClassResultExtended juniorClass : juniorClassList) {
+                            for (ClassResultExtended subJuniorClass : subJuniorClassList) {
+                                // If juniorClass and subJuniorClass are both JuniorMen or both Junior Women
+                                // then merge
+                                if (juniorClass.getNolCategory().equals(subJuniorClass.getNolCategory())) {
+                                    for (PersonResult subJuniorPersonResult : subJuniorClass.getPersonResult()) {
+                                        juniorClass.getPersonResult().add(subJuniorPersonResult);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Now sort times and fix placings
+                        for (ClassResultExtended juniorClassResult : juniorClassList) {
+                            // Sort
+                            Collections.sort(juniorClassResult.getPersonResult(), new PersonResultCompare());
+                            // Fix Placings
+                            int position = 1;
+                            for (PersonResult personResult : juniorClassResult.getPersonResult()) {
+                                personResult.getResult().get(0).setPosition(BigInteger.valueOf(position));
+                                position += 1;
+                            }
+                        }
+                        raceResultList.addAll(seniorClassList);
+                        raceResultList.addAll(juniorClassList);
+                    }
+                    else {
+                        raceResultList = thisRaceResultList; // resultList;
+                    }
+
                     numberOfRaces += 1;
                     
-                    Event thisEvent = generateEventStage(thisResultList.getEvent(), eventRaceIds, raceNumber, numberOfRacesInThisEvent);
+                    //Event thisEvent = generateEventStage(thisResultList.getEvent(), eventRaceIds, raceNumber, numberOfRacesInThisEvent);
 
                     Id eventId = thisEvent.getId();
                     
-                    NOLSeasonEventList.add(thisEvent);                                                          
+                    NOLSeasonEventList.add(thisEvent);
                     
                     // Go Through Each Class And Process Results
-                    for (ClassResultExtended classResult : resultList) {
+                    for (ClassResultExtended classResult : raceResultList) { //for (ClassResultExtended classResult : resultList) {
                         String className = classResult.getClazz().getName();
                         
                         TeamResultType teamResultType = classResult.getTeamResultType();                                                
@@ -290,7 +367,7 @@ public class NolScoreCalculator {
                             }
                             
                         } 
-                        else {
+                        else { // Individual Race (Not a relay)
                             for (PersonResult personResult : classResult.getPersonResult()) {
 
                                 // Individual
@@ -309,8 +386,8 @@ public class NolScoreCalculator {
                                
                                 // Create NOL Athlete and Result from the IOF PersonResult
                                 Entity nolAthlete = new Entity(personResult, nolCategory);
-                                Result nolResult = new Result(personResult, eventId);
-                                
+                                Result nolResult = new Result(personResult, eventId, classResult.isSubJunior());
+
                                 // Hack to fix membership issues (hard coded)
                                 //nolAthlete = NolTeamCorrection.fixNolTeamMembership(nolAthlete);
 
@@ -325,28 +402,17 @@ public class NolScoreCalculator {
                                     NOLSeasonResults.add(nolAthlete);
                                 }
 
-                                // Team 
+                                // Team
+                                // SUBJUNIORS don't get counted
+                                if (classResult.subJunior) {
+                                    continue;
+                                }
+
                                 if (personResult.getOrganisation() == null || personResult.getOrganisation().getId() == null 
                                         || nolTeamResultsIndexes.get(personResult.getOrganisation().getId().getValue()) == null) {
                                     // This person isn't in a NOL team                                    
                                     continue;
                                 }
-                                
-                                // HACK FOR BELINDA LAWFORD in 2018 QLD WEEKEND
-                                // 6045 and 6046
-                                if (eventId.getValue().equals("6045") || eventId.getValue().equals("6046")){
-                                    if (nolAthlete.name.toLowerCase().contains("belinda lawford")){
-                                        continue;
-                                    }                                                                    
-                                }
-                                
-                                // HACK FOR LIIS JOHANSON in 2018 AUS SPRINT CHAMPIONSHIPS
-                                //if (eventId.getValue().equals("6390")){
-                                //    if (nolAthlete.name.toLowerCase().contains("liis johanson")){
-                                //        continue;
-                                //    }                                                                    
-                                //}
-                                
 
                                 // Find the right team result and add this personResult to it                                
                                 int index = nolTeamResultsIndexes.get(personResult.getOrganisation().getId().getValue());
@@ -546,6 +612,44 @@ public class NolScoreCalculator {
             progressBar.updateBar(100, "You can close now this window." + "\n");
         }        
     }
+
+    private static ArrayList<ClassResultExtended> getRaceResults(ArrayList<ClassResultExtended> resultList, int raceNumber) {
+
+        // Copy the resultList - we don't want to corrupt/change the original
+        // Hack here, deep copy / clone wasn't working so copy the things we need from resultList
+        // then just add in the PersonResults for this race number
+        ArrayList<ClassResultExtended> thisRaceResultList = new ArrayList<ClassResultExtended>();
+
+        for (ClassResultExtended classResult : resultList) {
+
+            // Make a copy of the results
+            ClassResultExtended copyClassResult = new ClassResultExtended();
+            copyClassResult.setNolCategory(classResult.getNolCategory());
+            copyClassResult.setTeamResultType(classResult.getTeamResultType());
+            copyClassResult.setClazz(classResult.getClazz());
+            copyClassResult.setCourse(classResult.getCourse());
+            copyClassResult.setTimeResolution(classResult.getTimeResolution());
+            copyClassResult.setSubJunior(classResult.isSubJunior());
+
+            Iterator<PersonResult> itr = classResult.getPersonResult().iterator();
+            while (itr.hasNext()) {
+                PersonResult personResult = itr.next();
+                if (personResult.getResult().get(0).getRaceNumber().intValue() == raceNumber) {
+                    // This result isn't for this race - remove it (from the copy!)
+                    copyClassResult.getPersonResult().add(personResult);
+                }
+                /*
+                if (personResult.getResult().get(0).getRaceNumber().intValue() != raceNumber) {
+                    // This result isn't for this race - remove it (from the copy!)
+                    itr.remove();
+                }
+                 */
+            }
+
+            thisRaceResultList.add(copyClassResult);
+        }
+        return thisRaceResultList;
+    }
     
     private static Event generateEventStage(Event mainEvent, ArrayList<String> eventRaceIds, int raceNumber, int numberOfRacesInThisEvent) {
         // When we have multiple events (multiday race) use this method to split the 
@@ -579,7 +683,7 @@ public class NolScoreCalculator {
         return lastIndEventSelection == JOptionPane.YES_OPTION;
     }
 
-    private static List<ClassResultExtended> getClassesForAgeCategory(ResultList resultList, NolAgeCategory nolAgeCategory) {
+    private static ArrayList<ClassResultExtended> getClassesForAgeCategory(ResultList resultList, NolAgeCategory nolAgeCategory) {
 
         String[] validEliteClasses;
         String[] validNonEliteClasses;
@@ -612,7 +716,7 @@ public class NolScoreCalculator {
                 for (ClassResultExtended classResult : classResults) {
                     classResult.setTeamResultType(TeamResultType.Placings);
                 }
-            }            
+            }
 
             return classResults;
         }
@@ -716,49 +820,13 @@ public class NolScoreCalculator {
                     ClassResultExtended newClassResult = new ClassResultExtended(classResult);
                                        
                     NolCategory nolCategory = getNolCategory(className);
-                    newClassResult.setNolCategory(nolCategory);                    
-                    
-                    /*
-                    switch (nolAgeCategory){
-                        case Senior:
-                            for (String mixedClass : ELITE_MIXED_CLASSES){
-                                if (className.contains(mixedClass)) {
-                                    newClassResult.setNolCategory(NolCategory.SeniorMixed);
-                                    newClassResult.setMixedCategory(true);
-                                }                                
-                            }                              
-                            break;
-                        case Junior:
-                            for (String mixedClass : JUNIOR_MIXED_CLASSES){
-                                if (className.contains(mixedClass)) {
-                                    newClassResult.setNolCategory(NolCategory.JuniorMixed);                                    
-                                    newClassResult.setMixedCategory(true);
-                                }
-                            }
-                    }
-                   
-                    if (!newClassResult.isMixedCategory()) {
-                        if (className.contains("M")) {
-                            switch (nolAgeCategory) {
-                                case Junior:
-                                    newClassResult.setNolCategory(NolCategory.JuniorMen);
-                                    break;
-                                default:
-                                    newClassResult.setNolCategory(NolCategory.SeniorMen);
-                            }
-                        } else {
-                            switch (nolAgeCategory) {
-                                case Junior:
-                                    newClassResult.setNolCategory(NolCategory.JuniorWomen);
-                                    break;
-                                default:
-                                    newClassResult.setNolCategory(NolCategory.SeniorWomen);
-                            }
-                        }
-                    }
-                    */
+                    newClassResult.setNolCategory(nolCategory);
+
                     // Set default team score calc method
                     newClassResult.setTeamResultType(TeamResultType.RaceTimes);
+
+                    // Add SubJunior field if it's there
+                    newClassResult.setSubJunior(className.contains(SUBJUNIOR_IDENTIFIER));
 
                     selectedClasses.add(newClassResult);
                 }
@@ -815,10 +883,10 @@ public class NolScoreCalculator {
         // where we have M/W21E and M/W20A + M/W18A.
         // First go through and decide which classes to keep
         // Seniors
-        List<ClassResultExtended> seniorClassList = getClassesForAgeCategory(resultList, NolAgeCategory.Senior);
+        ArrayList<ClassResultExtended> seniorClassList = getClassesForAgeCategory(resultList, NolAgeCategory.Senior);
 
         // Juniors
-        List<ClassResultExtended> juniorClassList = getClassesForAgeCategory(resultList, NolAgeCategory.Junior);
+        ArrayList<ClassResultExtended> juniorClassList = getClassesForAgeCategory(resultList, NolAgeCategory.Junior);
 
         ArrayList<ClassResultExtended> validClassList = new ArrayList<>();
         validClassList.addAll(seniorClassList);
@@ -832,13 +900,125 @@ public class NolScoreCalculator {
         }
 
         return validClassList;
+    }
 
-        // OLD METHOD FROM HERE
-        // Remove all class results that are not NOL classes
-        //boolean usingEliteClasses = isUsingEliteClasses(resultList);
-        //List<ClassResult> classResults = resultList.getClassResult();
-        //classResults.removeIf((ClassResult classResult) -> !isValidClass(classResult.getClazz().getName(), usingEliteClasses));
-        //return resultList;
+    private static boolean isMergeJuniorClasses(ArrayList<ClassResultExtended> resultList, int raceNumber, Event thisEvent) {
+
+        // E-goddamn-motherfucking-Ventor is really inconsistent with having COURSE information in the PersonResults
+        // So... we need to ask the user whether the 18s (subJuniors) and 20s (juniors) were on the same course.
+        // BUT only ask if there are 18's and 20's so check first
+        boolean subJuniors = false;
+        for (ClassResultExtended classResult : resultList) {
+            if (classResult.getClazz().getName().contains(SUBJUNIOR_IDENTIFIER)) {
+                subJuniors = true;
+            }
+        }
+        if (!subJuniors) return false;
+
+        // If we get here then there is 18s + 20s
+
+        Hashtable<NolCategory, Double> categoryLengthDic = new Hashtable<NolCategory, Double>();
+        for (ClassResultExtended classResult : resultList) {
+
+            if (classResult.nolCategory != NolCategory.JuniorMen && classResult.nolCategory != NolCategory.JuniorWomen) {
+                // We don't care if it's the senior classes
+                continue;
+            }
+
+            for (PersonResult personResult : classResult.getPersonResult()) {
+
+                if (personResult.getResult().get(0).getRaceNumber().intValue() == raceNumber) {
+
+                    if (personResult.getResult().get(0).getCourse() == null) {
+                        // E-goddamn-motherfucking-ventor has no course information
+                        break; // ... Out of the PersonResult Loop
+                    }
+
+                    // This is the first result in this class for this particular race
+                    if (categoryLengthDic.containsKey(classResult.getNolCategory())) {
+                        if (categoryLengthDic.get(classResult.getNolCategory()).equals(personResult.getResult().get(0).getCourse().getLength())) {
+                            return true;
+                        }
+                    }
+                    else {
+                        categoryLengthDic.put(classResult.getNolCategory(),personResult.getResult().get(0).getCourse().getLength());
+                    }
+                    break; // ... Out of the PersonResult Loop
+                }
+            }
+        }
+
+
+        // If we've got here, then fucking Eventor has let us down AGAIN, ask the user
+        int dialogButton = JOptionPane.YES_NO_OPTION;
+        int dialogResult = JOptionPane.showConfirmDialog (null, "Were the 18s and 20s racing the same course in " + thisEvent.getName().toString(),"Warning",dialogButton);
+        if(dialogResult == JOptionPane.YES_OPTION){
+            return true;
+        }
+        else return false;
+
+/*
+        // First decide if we need to merge or keep separate
+        // Looking at Easter 2021 the "Course" object was mostly NULL, the only useful field was length
+        // so merge the classes if they are the same length
+        Hashtable<NolCategory, Double> categoryLengthDic = new Hashtable<NolCategory, Double>();
+        Boolean sameCourse = false;
+        for (ClassResultExtended classResult : resultList) {
+
+            if (classResult.nolCategory != NolCategory.JuniorMen && classResult.nolCategory != NolCategory.JuniorWomen) {
+                // We don't care if it's the senior classes
+                continue;
+            }
+
+            for (PersonResult personResult : classResult.getPersonResult()) {
+
+                if (personResult.getResult().get(0).getRaceNumber().intValue() == raceNumber) {
+                    // This is the first result in this class for this particular race
+
+                    if (categoryLengthDic.containsKey(classResult.getNolCategory())) {
+                        if (categoryLengthDic.get(classResult.getNolCategory()).equals(classResult.getCourse().get(0).getLength())) {
+                            sameCourse = true;
+                        }
+                    }
+                    else {
+                        categoryLengthDic.put(classResult.getNolCategory(),classResult.getCourse().get(0).getLength());
+                    }
+                    break; // ... Out of the PersonResult Loop
+
+                }
+
+            }
+
+
+        }
+
+        return sameCourse;
+        */
+    }
+
+    private static ArrayList<ClassResultExtended> fixMultipleJuniorClasses(ArrayList<ClassResultExtended> juniorClassList) {
+
+        // First decide if we need to merge or keep separate
+        // Looking at Easter 2021 there "Course" object was mostly NULL, the only useful field was length
+        // so merge the classes if they are the same length
+        Hashtable<NolCategory, Double> categoryLengthDic = new Hashtable<NolCategory, Double>();
+        Boolean sameCourse = false;
+        for (ClassResultExtended classResult : juniorClassList) {
+            if (categoryLengthDic.containsKey(classResult.getNolCategory())) {
+                if (categoryLengthDic.get(classResult.getNolCategory()).equals(classResult.getCourse().get(0).getLength())) {
+                    sameCourse = true;
+                }
+            }
+            else {
+                categoryLengthDic.put(classResult.getNolCategory(),classResult.getCourse().get(0).getLength());
+            }
+        }
+
+        if (sameCourse) {
+            juniorClassList = mergeJuniorClasses(juniorClassList);
+        }
+
+        return juniorClassList;
     }
 
     private static ArrayList<ClassResultExtended> mergeAandBfinals(ArrayList<ClassResultExtended> classResultList) {
@@ -964,7 +1144,7 @@ public class NolScoreCalculator {
         */
         NolAgeCategory nolAgeCategory;          
         
-        if (className.toLowerCase().contains("junior") || className.contains("20")) {
+        if (className.toLowerCase().contains("junior") || className.contains("20") || className.contains("18")) {
             nolAgeCategory = NolAgeCategory.Junior;
         }
         else {

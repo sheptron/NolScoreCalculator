@@ -10,8 +10,8 @@ import NolXml10.NolClassResult;
 import NolXml10.NolEvent;
 import NolXml10.NolEventList;
 import NolXml10.NolPersonRaceResult;
-import java.io.File;
-import java.io.FileOutputStream;
+
+import java.io.*;
 import java.util.ArrayList;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -23,11 +23,7 @@ import static nolscorecalculator.NolScoreCalculator.CREATOR;
 import NolXml10.NolPersonResult;
 import NolXml10.NolResultList;
 import NolXml10.ObjectFactory;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
+
 import java.util.Collections;
 import java.util.Map;
 import javax.xml.transform.TransformerException;
@@ -170,6 +166,8 @@ public class ResultsPrinter {
             TransformerFactory tFactory = TransformerFactory.newInstance();
             
             InputStream is = getClass().getResourceAsStream("NolHtmlResults.xsl");
+            //InputStream is = new FileInputStream("src/main/resources/NolHtmlResults.xsl");
+            
             Transformer transformer = tFactory.newTransformer(new javax.xml.transform.stream.StreamSource(is));
 
             //Transformer transformer

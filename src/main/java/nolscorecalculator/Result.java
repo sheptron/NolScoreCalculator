@@ -37,12 +37,15 @@ public final class Result {
     private boolean isTeamResult = false;
     private boolean isFinalRaceOfSeason = false;
     public TeamResultType teamResultType;
+    public boolean subJunior = false;
     
     public static final int [] TEAM_SCORES = {9, 7, 5, 4, 3, 2, 1};
     public static final int RELAY_MULTIPLIER = 2; // Team scores in a relay are TEAM_SCORES x RELAY_MULTIPLIER
     public static final int RUNNERS_TO_COUNT = 3;
     
     private static final int [] INDIVIDUAL_SCORES = {30, 27, 24, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+
+    private static final int [] INDIVIDUAL_SCORES_SUBJUNIOR = {15, 13, 11, 9, 8, 7, 6, 5, 4, 3, 2, 1};
     
     private static final int [] INDIVIDUAL_SCORES_FINAL_RACE = {33, 30, 27, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
     
@@ -82,11 +85,12 @@ public final class Result {
         this.athleteNames = new ArrayList<>();
     }
 
-    public Result(PersonResult personResult, Id _id) {       
+    public Result(PersonResult personResult, Id _id, boolean _subJunior) {
        
         // TODO constructor for an individual result
         this.id =_id;
         this.isTeamResult = false;
+        this.subJunior = _subJunior;
         
         this.raceTimes = new ArrayList<>();
         this.athleteNames = new ArrayList<>();
@@ -261,6 +265,9 @@ public final class Result {
         if (this.isTeamResult) {
             scores = TEAM_SCORES;
         }
+        else if (this.subJunior) {
+            scores = INDIVIDUAL_SCORES_SUBJUNIOR;
+        }
         else if (this.isFinalRaceOfSeason) {
             scores = INDIVIDUAL_SCORES_FINAL_RACE;
         }
@@ -348,7 +355,11 @@ public final class Result {
 
     public void setIsFinalRaceOfSeason(boolean isFinalRaceOfSeason) {
         this.isFinalRaceOfSeason = isFinalRaceOfSeason;
-    }       
+    }
+
+    public boolean isSubJunior() { return subJunior; }
+
+    public void setSubJunior(boolean subJunior) { this.subJunior = subJunior; }
 
     @Override
     public int hashCode() {
